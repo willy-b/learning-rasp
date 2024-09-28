@@ -1,0 +1,75 @@
+# Example working towards identifying nouns and verbs
+# using Restricted Access Sequence Processing (RASP) (Weiss et al 2021)
+# which expresses the operations Transformer neural networks can perform
+# (and can be compiled to a neural network).
+
+# (some few nouns and verbs from ReCOGS vocab, not using more for easier reading)
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a . the boy painted a girl ."
+#            ^ dictionary lookup from here                                                                ^ input starts here
+
+NOUN_TYPE = 0;
+VERB_TYPE = 1;
+IGNORE_TYPE = 2;
+INPUT_IDX = 3;
+
+input_section_idx = selector_width(select(tokens, ".", ==) and select(indices, indices, <=))*(0 if indicator(tokens == " " or tokens == ".") else 1);
+
+# It is expedient to convert entire words to comparable tokens (like hashing to get the dictionary key), so can check words against our dictionary (in a single operation in parallel).
+# As a starting point just to make the point of the approach, I use bag of letters by summing a mapping of letters to primes (fwiw, humans don't much notice if the order of letters within words is scrambled. Can you raed tihs esliay egunoh?).
+# (Note it would not distinguish "loop" from "pool" but this can be easily fixed and is not the focus in this example yet -- will also write example without using this approximation.)
+def as_num_for_letter_multiset_word_pooling(t) {
+    # To be multiset unique, need logarithm of prime so that the sum aggregation used in RASP corresponds to prime number factorization (sum of logs of primes is same as log of product of primes) (we can do sum aggregation instead of mean by multiplying by length)
+    # However RASP does not appear to support logarithms (underlying multilayer perceptron can learn to approximate logarithms)
+    #letter_to_prime_for_multiset_word_pooling = {"a": 2, "b": 3, "c": 5, "d": 7, "e": 11, "f": 13, "g": 17, "h": 19, "i": 23, "j": 29, "k": 31, "l": 37, "m": 41, "n": 43, "o": 47, "p": 53, "q": 59, "r": 61, "s": 67, "t": 71, "u": 73, "v": 79, "w": 83, "x": 89, "y": 97, "z": 101, ".": 0, " ": 0, ":": 0};
+    map_letter_to_log_prime_for_pooling = {"a": 0.6931471805599453, "b": 1.0986122886681098, "c": 1.6094379124341003, "d": 1.9459101490553132, "e": 2.3978952727983707, "f": 2.5649493574615367, "g": 2.833213344056216, "h": 2.9444389791664403, "i": 3.1354942159291497, "j": 3.367295829986474, "k": 3.4339872044851463, "l": 3.6109179126442243, "m": 3.713572066704308, "n": 3.7612001156935624, "o": 3.8501476017100584, "p": 3.970291913552122, "q": 4.07753744390572, "r": 4.110873864173311, "s": 4.204692619390966, "t": 4.2626798770413155, "u": 4.290459441148391, "v": 4.3694478524670215, "w": 4.418840607796598, "x": 4.48863636973214, "y": 4.574710978503383, "z": 4.61512051684126,
+    # we zero out tokens we want not to affect the identity of the word
+    ".": 0, " ": 0, ":": -1, "(": -1, ")": -1, "0": -1, "1": -1, "2": -1, "3": -1, "4": -1, "5": -1, "6": -1, "7": -1, "8": -1, "9": -1, ";": -1};
+    return map_letter_to_log_prime_for_pooling[t];
+}
+
+# we will reduce words to single tokens (in parallel), but we need to get their word index to group by
+word_indices = (1+selector_width(select(tokens, " ", ==) and select(indices, indices, <=)))*(0 if indicator(tokens == " ") else 1);
+word_lengths = selector_width(select(word_indices, word_indices, ==))*(0 if indicator(word_indices <= 0) else 1);
+
+pseudoembeddedwords = aggregate(select(word_indices, word_indices, ==), as_num_for_letter_multiset_word_pooling(tokens))*word_lengths;
+
+pseudoembeddedinput = pseudoembeddedwords*indicator(input_section_idx==INPUT_IDX);
+pseudoembeddeddictionary = pseudoembeddedwords*indicator(input_section_idx<INPUT_IDX);
+
+guess_at_type = -1*(1 - indicator(input_section_idx == INPUT_IDX)) + round(aggregate(select(pseudoembeddeddictionary, pseudoembeddedinput, ==), input_section_idx))*indicator(input_section_idx == INPUT_IDX);
+
+# print the whole input ("the boy painted a girl")
+tokens*(input_section_idx == INPUT_IDX);
+#     s-op: out
+#         Example: out("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a . the boy painted a girl .")
+# = [, , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , t, h, e, , b, o, y, , p, a, i, n, t, e, d, , a, , g, i, r, l, , ] (strings)
+
+# print the verbs only ("painted")
+tokens*(guess_at_type==VERB_TYPE);
+#     s-op: out
+#         Example: out("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a . the boy painted a girl .")
+# = [, , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , p, a, i, n, t, e, d, , , , , , , , , ] (strings)
+
+# print the nouns only ("boy" "girl")
+tokens*(guess_at_type==NOUN_TYPE);
+#     s-op: out
+#         Example: out("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a . the boy painted a girl .")
+# = [, , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , b, o, y, , , , , , , , , , , , g, i, r, l, , ] (strings)
+
+# What is the point of this?
+# One of my interests with this
+# (actually doing it for a final project in Stanford XCS224U later this year)
+# is to attempt to write a program in Transformer-compatible
+# RASP by hand to convert simple sentences into ReCOGS logical form (you can
+# read about it at "ReCOGS: How Incidental Details of a Logical Form Overshadow
+# an Evaluation of Semantic Interpretation", Zhengxuan Wu et al 2023,
+# https://arxiv.org/abs/2303.13716) because if we could, since Restricted Access
+# Sequence Processing (RASP) expresses what a Transformer can do, we could help
+# prove Transformers can handle some forms of compositional generalization (a
+# matter of debate now), and we may learn about why seemingly incidental
+# differences between COGS and ReCOGS logical form formats make a big difference
+# in Transformer performance on compositionality tasks.
+# That is convert a sentence like "the boy painted a girl" to ReCOGS LF
+# "* boy (1); girl (2); paint (3) AND theme(3, 2) AND agent(3, 1)"
+# (Transformers do NOT have a problem with that type of transformation, 
+# but some generalizations in ReCOGS, especially structural, do seem to pose issues.)
