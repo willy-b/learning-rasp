@@ -1,12 +1,44 @@
-# Interesting: It is very easy to program the PARITY task in RASP, where RASP is supposed to model the computational capabilities of Transformers, and Transformers are not generally regarded as being able to actually learn to solve PARITY (unlike a feedforward neural network in general as Chiang and Cholak 2022 ( https://arxiv.org/abs/2202.12172 ) note that Rumelhart 1986 showed).
-# Definition of PARITY per Strobl et al 2024 ( https://arxiv.org/abs/2311.00208 ):
-# "The classic examples of languages not in AC0 are PARITY and MAJORITY. The language PARITY ⊆ {0, 1}∗ contains all bit strings containing an odd number of 1’s, and MAJORITY ⊆ {0, 1}∗ consists of all bit strings in which more than half of the bits are 1’s."
-# With intermediate steps Transformers are Turing complete and can definitely solve Parity (though it is even then hard to train, see Zhou et al 2024 ( https://arxiv.org/abs/2310.16028 ) who modify RASP to get learnable RASP ), but RASP per Weiss 2021 ( https://arxiv.org/abs/2106.06981 ) originally models an encoder without a decoder loop/scratchpad/chain of thought and solves PARITY easily.
-# Strobl et al 2024 note that "Average-hard and softmax attention" as opposed to hard attention enable counting "which can be used to solve problems like MAJORITY that are outside AC0" (like PARITY as well), but Chiang and Cholak (2022) ( https://arxiv.org/abs/2202.12172 )  show that while they theoretically can implement parity with a Transformer they could not train a Transformer to learn it, and Zhou et al 2024 also excluded RASP operations when defining their RASP-L (Learnable RASP) such that parity was not solvable without modification or a decoder loop. Deletang et al 2023 ( https://arxiv.org/abs/2207.02098 ) also find that "transformers learn MAJORITY, but not PARITY."
+# Interesting: It is very easy to program the PARITY task in RASP,
+# where RASP intends to model the computational capabilities of Transformer encoders,
+# but Transformer encoders are not generally regarded as being able to actually
+# learn to solve PARITY
+# (unlike a feedforward neural network in general as
+# Chiang and Cholak 2022 ( https://arxiv.org/abs/2202.12172 ) note that
+# Rumelhart 1986 showed).
+# Definition of PARITY per Strobl et al 2024
+# ( https://arxiv.org/abs/2311.00208 ):
+# "The classic examples of languages not in AC0 are PARITY and MAJORITY.
+# The language PARITY ⊆ {0, 1}∗ contains all bit strings
+# containing an odd number of 1’s, and MAJORITY ⊆ {0, 1}∗ consists of
+# all bit strings in which more than half of the bits are 1’s."
+# With intermediate decoder steps Transformers are Turing complete and
+# can definitely solve Parity (though it is even then hard to train,
+# see Zhou et al 2024 ( https://arxiv.org/abs/2310.16028 )
+# who modify RASP to get learnable RASP (RASP-L) and
+# apply RASP-L to autoregressive decoder with scratchpad),
+# but RASP per Weiss 2021 ( https://arxiv.org/abs/2106.06981 )
+# originally models an encoder WITHOUT a decoder
+# loop/scratchpad/chain of thought and RASP solves PARITY easily.
+# Strobl et al 2024 note that "Average-hard and softmax attention"
+# as opposed to hard attention enable counting
+# "which can be used to solve problems like MAJORITY that are outside AC0"
+# (like PARITY as well), but
+# Chiang and Cholak (2022) ( https://arxiv.org/abs/2202.12172 )  show that
+# while they theoretically can implement parity with a Transformer encoder
+# they could NOT train a Transformer to learn it,
+# and Zhou et al 2024 also excluded RASP operations when defining their
+# RASP-L (Learnable RASP) such that parity was not solvable
+# without modification even with a decoder loop.
+# Deletang et al 2023 ( https://arxiv.org/abs/2207.02098 )
+# also find that "transformers learn MAJORITY, but not PARITY."
 
-# In any case, using the RASP "selector_width" operation on a selector matchng ones followed by an elementwise modulus, 
-# it appears Parity can be easily solved in RASP since one can cause the entire sequence to be equal to the number of ones
-# and then do a elementwise modulo 2 operation so that the parity (1 if odd number of 1s, 0 otherwise) is presented in all digits of the output sequence identically.
+# In any case, using the RASP "selector_width" operation on a
+# selector matchng ones followed by an elementwise modulus,
+# it appears Parity can be easily solved in RASP since one can cause the
+# entire sequence to be equal to the number of ones
+# and then do a elementwise modulo 2 operation so that the parity
+# (1 if odd number of 1s, 0 otherwise) is presented in all digits
+# of the output sequence identically.
 
 # e.g.
 
