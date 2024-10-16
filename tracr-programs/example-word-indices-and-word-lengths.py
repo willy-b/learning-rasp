@@ -12,15 +12,28 @@ import math
 # Also pointwise multiplication between two sequences is not supported in Tracr at this time.
 # So below we use Tracr built-in aggregate to get frac_prevs and since cannot multiply by indices,
 # we take the logarithm of both sequences, add them, and then exponentiate to accomplish the multiplication.
+EPS = 0.000001
+# non-negative sequences only.
+# sequences with elements more negative than EPS will throw an error.
+def log_sop(sop):
+  return rasp.numerical(rasp.Map(lambda x: math.log(x + (EPS if x <= 0 else 0)), sop))
+def exp_sop(sop):
+  return rasp.numerical(rasp.Map(lambda x: math.exp(x), sop))
+
+# get around limitation on no multiplies in Tracr SequenceMap by adding logarithms instead
+def multiply_sequences(sop1, sop2):
+  log_sop1 = log_sop(sop1)
+  log_sop2 = log_sop(sop2)
+  log_sum_sops = rasp.numerical(rasp.LinearSequenceMap(log_sop1, log_sop2, 1, 1))
+  return exp_sop(log_sum_sops)
+
+def round_sequence(sop):
+  return rasp.Map(lambda x: round(x), sop)
+
 def count_occurrences_up_to(sop):
   # sop could be 'rasp.tokens == " "' for example
   frac_prevs_sop = make_frac_prevs(sop)
-  # 10 is chosen as some number guaranteed greater than math.log(MAX_SEQUENCE_LENGTH + 1)
-  log_frac_prevs_sop = rasp.numerical(rasp.Map(lambda x: math.log(x) if x > 0 else 10, rasp.numerical(frac_prevs_sop)))
-  log_indices = rasp.numerical(rasp.Map(lambda x: math.log(x + 1), rasp.indices))
-  log_sum_frac_prevs_sop_and_indices = rasp.numerical(rasp.LinearSequenceMap(log_frac_prevs_sop, log_indices, 1, 1))
-  num_occurrences_up_to = rasp.Map(lambda x: round(math.exp(x)) if x < 10 else 0, log_sum_frac_prevs_sop_and_indices)
-  return num_occurrences_up_to
+  return round_sequence(multiply_sequences(frac_prevs_sop, rasp.indices + 1))
 
 # Note in Weiss' RASP these operations are easier than in Tracr's subset supported operations
 # word_indices = (1+selector_width(select(tokens, " ", ==) and select(indices, indices, <=)))*(0 if indicator(tokens == " ") else 1);
