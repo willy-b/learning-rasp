@@ -5,14 +5,20 @@
 
 # WARNING: This is just an example and should not be used for anything as is!
 
-# (some few nouns and verbs from ReCOGS vocab, not using more for easier reading)
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a . the boy painted a girl ."
-#            ^ dictionary lookup from here                                                                ^ input starts here
+# You can run this using `rasp.sh` at https://github.com/tech-srl/RASP/blob/61dde62577589b291db39d192de7d481ce97fdae/rasp.sh ,
+# using the command `./rasp.sh < decoder-loop-example-parse-into-recogs-style-variables.rasp > output.log .
+# Then open `output.log` to see the results.
+
+# Let's start with some few nouns and verbs from ReCOGS vocab, not using more for easier reading.
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , . agent theme . the boy painted a girl ."
+#            ^ dictionary lookup from here                                                                                                 ^ input starts here
 
 NOUN_TYPE = 0;
 VERB_TYPE = 1;
-IGNORE_TYPE = 2;
-INPUT_IDX = 3;
+DET_TYPE = 2;
+IGNORE_TYPE = 3;
+VERB_TRANS_OBJ_NOT_OMITTED_TEMPLATE = 4;
+INPUT_IDX = 5;
 
 input_section_idx = selector_width(select(tokens, ".", ==) and select(indices, indices, <=))*(0 if indicator(tokens == " " or tokens == ".") else 1);
 
@@ -25,7 +31,7 @@ def as_num_for_letter_multiset_word_pooling(t) {
     #letter_to_prime_for_multiset_word_pooling = {"a": 2, "b": 3, "c": 5, "d": 7, "e": 11, "f": 13, "g": 17, "h": 19, "i": 23, "j": 29, "k": 31, "l": 37, "m": 41, "n": 43, "o": 47, "p": 53, "q": 59, "r": 61, "s": 67, "t": 71, "u": 73, "v": 79, "w": 83, "x": 89, "y": 97, "z": 101, ".": 0, " ": 0, ":": 0};
     map_letter_to_log_prime_for_pooling = {"a": 0.6931471805599453, "b": 1.0986122886681098, "c": 1.6094379124341003, "d": 1.9459101490553132, "e": 2.3978952727983707, "f": 2.5649493574615367, "g": 2.833213344056216, "h": 2.9444389791664403, "i": 3.1354942159291497, "j": 3.367295829986474, "k": 3.4339872044851463, "l": 3.6109179126442243, "m": 3.713572066704308, "n": 3.7612001156935624, "o": 3.8501476017100584, "p": 3.970291913552122, "q": 4.07753744390572, "r": 4.110873864173311, "s": 4.204692619390966, "t": 4.2626798770413155, "u": 4.290459441148391, "v": 4.3694478524670215, "w": 4.418840607796598, "x": 4.48863636973214, "y": 4.574710978503383, "z": 4.61512051684126,
     # we zero out tokens we want not to affect the identity of the word
-    ".": 0, " ": 0, ":": -1, "(": -1, ")": -1, "0": -1, "1": -1, "2": -1, "3": -1, "4": -1, "5": -1, "6": -1, "7": -1, "8": -1, "9": -1, ";": -1};
+    ".": 0, " ": 0, ":": -1, "(": -1, ")": -1, "0": -1, "1": -1, "2": -1, "3": -1, "4": -1, "5": -1, "6": -1, "7": -1, "8": -1, "9": -1, ";": -1, ",": -1};
     return map_letter_to_log_prime_for_pooling[t];
 }
 
@@ -42,21 +48,22 @@ guess_at_type = -1*(1 - indicator(input_section_idx == INPUT_IDX)) + round(aggre
 
 # print the whole input ("the boy painted a girl")
 tokens*(input_section_idx == INPUT_IDX);
-#     s-op: out
-#         Example: out("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a . the boy painted a girl .")
-# = [, , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , t, h, e, , b, o, y, , p, a, i, n, t, e, d, , a, , g, i, r, l, , ] (strings)
+# s-op: out
+#         Example: out("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , . agent theme . the boy painted a girl .")
+# = [, , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , t, h, e, , b, o, y, , p, a, i, n, t, e, d, , a, , g, i, r, l, , ] (strings)
 
 # print the verbs only ("painted")
 tokens*(guess_at_type==VERB_TYPE);
-#     s-op: out
-#         Example: out("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a . the boy painted a girl .")
-# = [, , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , p, a, i, n, t, e, d, , , , , , , , , ] (strings)
+# s-op: out
+#         Example: out("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , . agent theme . the boy painted a girl .")
+#  = [, , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , p, a, i, n, t, e, d, , , , , , , , , ] (strings)
 
 # print the nouns only ("boy" "girl")
 tokens*(guess_at_type==NOUN_TYPE);
-#     s-op: out
-#         Example: out("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a . the boy painted a girl .")
-# = [, , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , b, o, y, , , , , , , , , , , , g, i, r, l, , ] (strings)
+# s-op: out
+#         Example: out("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , . agent theme . the boy painted a girl .")
+# = [, , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , b, o, y, , , , , , , , , , , , g, i, r, l, , ] (strings)
+
 
 # What is the point of this?
 # One of my interests with this
@@ -73,7 +80,7 @@ tokens*(guess_at_type==NOUN_TYPE);
 # in Transformer performance on compositionality tasks.
 # That is convert a sentence like "the boy painted a girl" to ReCOGS LF
 # "* boy (1); girl (2); paint (3) AND theme(3, 2) AND agent(3, 1)"
-# (Transformers do NOT have a problem with that type of transformation, 
+# (Transformers do NOT have a problem with that type of transformation,
 # but some generalizations in ReCOGS, especially structural, do seem to pose issues.)
 
 # Let's practice some relevant operations for that below, removing stop words and sorting nouns and verbs, then building a decoder loop to list noun and verbs as numbered variables in ReCOGS style, removing words on the ignore/stop list.
@@ -82,65 +89,66 @@ tokens*(guess_at_type==NOUN_TYPE);
 # Sort nouns, then verbs, then stopwords, lose spaces but we still know word boundaries (see sorted_word_indices_by_type below).
 sorted_input_by_type = sort(tokens*(input_section_idx == INPUT_IDX), guess_at_type);	
 # s-op: sorted_input_by_type
-#         Example: sorted_input_by_type("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a . the boy painted a girl .")
-# = [, , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , b, o, y, g, i, r, l, p, a, i, n, t, e, d, t, h, e, a] (strings)
+#         Example: sorted_input_by_type("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , . agent theme . the boy painted a girl .")
+# = [, , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , ,
+# , , , , , , , , b, o, y, g, i, r, l, p, a, i, n, t, e, d, t, h, e, a] (strings)
 
 sorted_word_indices_by_type = sort(word_indices*(input_section_idx == INPUT_IDX) + -1*(1 - indicator(input_section_idx == INPUT_IDX)), guess_at_type);
-#    s-op: sorted_word_indices_by_type
-#         Example: sorted_word_indices_by_type("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a . the boy painted a girl .")
-#  = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 22, 22, 22, 25, 25, 25, 25, 23, 23, 23, 23, 23, 23, 23, 21, 21, 21, 24] (ints)
+# s-op: sorted_word_indices_by_type
+#         Example: sorted_word_indices_by_type("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , . agent theme . the boy painted a girl .")
+# = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+# -1, 27, 27, 27, 30, 30, 30, 30, 28, 28, 28, 28, 28, 28, 28, 26, 26, 26, 29] (ints)
 
 sorted_input_type = sort(guess_at_type*(input_section_idx == INPUT_IDX) + -1*(1 - indicator(input_section_idx == INPUT_IDX)), guess_at_type);
-#     s-op: sorted_input_type
-#         Example: sorted_input_type("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a . the boy painted a girl .")
-# = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-# 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2] (ints)
+# s-op: sorted_input_type
+#         Example: sorted_input_type("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , . agent theme . the boy painted a girl .")
+# = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+# -1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2] (ints)
 
 # note "0" above is nouns, "1" above is verbs, "2" above is ignore/stopwords
 
 sorted_input_by_type = sorted_input_by_type * indicator(sorted_input_type == NOUN_TYPE or sorted_input_type == VERB_TYPE);
 # s-op: sorted_input_by_type
-#         Example: sorted_input_by_type("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a . the boy painted a girl .")
-# = [, , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , ,
-# b, o, y, g, i, r, l, p, a, i, n, t, e, d, , , , ] (strings)
+#         Example: sorted_input_by_type("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , . agent theme . the boy painted a girl .")
+# = [, , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , ,
+# , b, o, y, g, i, r, l, p, a, i, n, t, e, d, , , , ] (strings)
 
 sorted_word_indices_by_type = sorted_word_indices_by_type * indicator(sorted_input_type == NOUN_TYPE or sorted_input_type == VERB_TYPE) -1 * (1 - indicator(sorted_input_type == NOUN_TYPE or sorted_input_type == VERB_TYPE));
 # s-op: sorted_word_indices_by_type
-#         Example: sorted_word_indices_by_type("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a . the boy painted a girl .")
-# = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-# 22, 22, 22, 25, 25, 25, 25, 23, 23, 23, 23, 23, 23, 23, -1, -1, -1, -1] (ints)
+#         Example: sorted_word_indices_by_type("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , . agent theme . the boy painted a girl .")
+# = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+# -1, -1, 27, 27, 27, 30, 30, 30, 30, 28, 28, 28, 28, 28, 28, 28, -1, -1, -1, -1] (ints)
 
 OUTPUT_IDX = INPUT_IDX + 1;
 
-# Practicing for decoding step, let's pretend we have already started generating the logical form output 
-# and have made it to "boy ( 1 ) ; girl ( 2 ) ; painted ( 3 )" 
+# Practicing for decoding step, let's pretend we have already started generating the logical form output
+# and have made it to "boy ( 1 ) ; girl ( 2 ) ; painted ( 3 )"
 # and make sure we can find where we are in the logical form at the current time step
 # (let's keep omitting the definiteness indicator "*" as we are not using that yet)
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 )"
-#            ^ dictionary lookup                                                                                       ^ input                  ^ output (this gets added to, character by character). (the last character of RASP output sequence will be taken as decoder output token to append after that step.)
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 )"
+#            ^ dictionary lookup                                                                                                           ^ input                  ^ output (this gets added to, character by character). (the last character of RASP output sequence will be taken as decoder output token to append after that step.)
 
 # How many words have we output so far? How many nouns? How many verbs?
-OUTPUT_IDX = INPUT_IDX + 1;
 pseudoembeddedoutput = pseudoembeddedwords*indicator(input_section_idx==OUTPUT_IDX); # our "output" so far gets reappended to the networks input at each step, it is recurrent (continues adding to its own output)
 guess_at_output_type = -1*(1 - indicator(input_section_idx == OUTPUT_IDX)) + round(aggregate(select(pseudoembeddeddictionary, pseudoembeddedoutput, ==), input_section_idx))*indicator(input_section_idx == OUTPUT_IDX);
 word_changes_in_output = select(word_indices*indicator(input_section_idx == OUTPUT_IDX), word_indices*indicator(input_section_idx  == OUTPUT_IDX), !=) and select(indices + 1, indices, ==) and select(word_indices, 0, >) and select(guess_at_output_type, IGNORE_TYPE, !=);
 word_changes_in_output_flat = aggregate(word_changes_in_output, 1);
 num_words_in_output = selector_width(select(word_changes_in_output_flat, 1, ==));
 # >>      s-op: num_words_in_output
-#         Example: num_words_in_output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 )") = [3]*169 (ints)
+#         Example: num_words_in_output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 )") = [3]*169 (ints)
 
 num_nouns_in_output = selector_width(select(selector_width(select(word_changes_in_output_flat, indicator(guess_at_output_type == NOUN_TYPE), ==) and select(word_changes_in_output_flat, 1, ==) and select(indices-1, indices, ==)), 1, ==));
 # >>      s-op: num_nouns_in_output
-#         Example: num_nouns_in_output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 )") = [2]*169 (ints)
+#         Example: num_nouns_in_output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 )") = [2]*169 (ints)
 
 num_verbs_in_output = selector_width(select(selector_width(select(word_changes_in_output_flat, indicator(guess_at_output_type == VERB_TYPE), ==) and select(word_changes_in_output_flat, 1, ==) and select(indices-1, indices, ==)), 1, ==));
 # >>      s-op: num_verbs_in_output
-#         Example: num_verbs_in_output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 )") = [1]*169 (ints)
+#         Example: num_verbs_in_output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 )") = [1]*169 (ints)
 
 # By comparing these to the counts in our input, we can determine the current word we are adding to our logical form output.
 
 # Let's start by treating nouns and verbs the same and start with no output and do the decoder steps to generate the output
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . "
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . "
 
 # find where we are and continue
 input_section_idx_include_spaces = selector_width(select(tokens, ".", ==) and select(indices, indices, <=));
@@ -166,16 +174,18 @@ spaces_in_output = aggregate(select(input_section_idx_include_spaces, OUTPUT_IDX
 num_spaces_in_output = selector_width(select(spaces_in_output, 1, ==));
 
 # During the loop, we will determine what output word are we on and what index?
-word_changes_in_sorted_input = select(sorted_word_indices_by_type, sorted_word_indices_by_type, !=) and select(indices + 1, indices, ==) and select(sorted_word_indices_by_type, 0, >) and select(guess_at_output_type, IGNORE_TYPE, !=);
+word_changes_in_sorted_input = select(sorted_word_indices_by_type, sorted_word_indices_by_type, !=) and select(indices + 1, indices, ==) and select(sorted_word_indices_by_type, 0, >) and select(sorted_input_type, IGNORE_TYPE, !=) and select(sorted_input_type, DET_TYPE, !=) ;
 word_changes_in_sorted_input_flat = aggregate(word_changes_in_sorted_input, 1);
 sorted_word_input_indices = (1-indicator(sorted_word_indices_by_type > 0)) * -1 + (selector_width(select(word_changes_in_sorted_input_flat, 1, ==) and select(indices, indices, <=)))*indicator(sorted_word_indices_by_type > 0);
 word_output_indices = (1-indicator(guess_at_output_type == VERB_TYPE or guess_at_output_type == NOUN_TYPE)) * -1 + (selector_width(select(word_changes_in_output_flat, 1, ==) and select(indices, indices, <=)))*indicator(guess_at_output_type == VERB_TYPE or guess_at_output_type == NOUN_TYPE);
 num_letters_in_current_word_in_output = selector_width(select(indicator(word_output_indices == num_words_in_output), 1, ==));
 num_letters_in_current_word_in_input = selector_width(select(indicator(sorted_word_input_indices == num_words_in_output), 1, ==));
 
+
 # SIMPLIFIED VERSION OF THE DECODER LOOP
+# - First, let us handle introducing nouns and verbs:
 # if the number of spaces modulo 5 is 0, we need to output a semicolon or a space
-output = (";" if (num_semicolons_in_output < num_words_in_output) else " ") if (num_spaces_in_output % 5 == 0) else ""; 
+output = (";" if (num_semicolons_in_output < num_words_in_output) else " ") if (num_spaces_in_output % 5 == 0) else "";
 # if the number of spaces modulo 5 is 1, we are writing a word (and need to compare letter count with our dictionary) or just finished a word and need to write a space
 # to get this, we index shift by word_lengths and lookup
 target_word = indicator(sorted_word_input_indices==num_words_in_output)*sorted_input_by_type;
@@ -192,199 +202,285 @@ output = ((num_words_in_output) if (num_nums_in_output < num_words_in_output) el
 # if the number of spaces modulo 5 is 4, we need to write a close paren or a space
 output = (")" if num_close_paren_in_output < num_words_in_output else " ") if ((num_spaces_in_output % 5) == 4) else output;
 
-# print output, append to the example and repeat to run the decoder loop:
-# DECODER LOOP ITERATION 1
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . "
+# - Next, let us add the `agent` and `theme` for the simple transitive verb example we are starting with:
+
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) "
+
+num_nps_and_vs_in_input = selector_width(select(word_changes_in_sorted_input_flat, 1, ==));
+
+sp_after_intro = num_spaces_in_output - 5 * (num_nps_and_vs_in_input);
+num_words_in_output_after_intro = num_words_in_output - num_nps_and_vs_in_input;
+after_intro_num_open_paren_in_output = num_open_paren_in_output - num_nps_and_vs_in_input;
+after_intro_num_close_paren_in_output = num_close_paren_in_output - num_nps_and_vs_in_input;
+after_intro_num_nums_in_output = selector_width(select(nums_in_output, 1, ==)) - num_nps_and_vs_in_input;
+commas_in_output = aggregate(select(input_section_idx, OUTPUT_IDX, ==) and select(indices, indices, ==) and select(tokens, ",", ==), 1);
+after_intro_num_commas_in_output = selector_width(select(commas_in_output, 1, ==));
+
+# During the loop, we will determine what output word are we on and what index?
+verb_template_word_tokens = tokens*(input_section_idx == VERB_TRANS_OBJ_NOT_OMITTED_TEMPLATE);
+# = [, , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , a, g, e, n, t, , t, h, e, m, e, , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , ] (strings)
+
+verb_template_word_indices_raw = word_indices*(input_section_idx == VERB_TRANS_OBJ_NOT_OMITTED_TEMPLATE);
+# = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 27, 27, 27, 27, 27, 0, 28, 28, 28, 28, 28, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] (ints)
+
+word_changes_in_verb_template = select(verb_template_word_indices_raw,verb_template_word_indices_raw, !=) and select(indices + 1, indices, ==) and select(verb_template_word_indices_raw, 0, >);
+word_changes_in_verb_template_flat = aggregate(word_changes_in_verb_template, 1);
+verb_template_word_indices = (1-indicator(verb_template_word_indices_raw > 0)) * -1 + (selector_width(select(word_changes_in_verb_template_flat, 1, ==) and select(indices, indices, <=)))*indicator(verb_template_word_indices_raw > 0);
+
+# if spaces after intro block modulo 6 is 0,
+# then we output current letter in target word
+post_nv_introduction_output = " ";
+# compute next word: agent, theme in our first example with only v_trans (object not omitted)
+after_intro_target_word = indicator(verb_template_word_indices == num_words_in_output_after_intro)*verb_template_word_tokens;
+# [, , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , a, g, e, n, t, , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , ] (strings)
+after_intro_target_word_indices = selector_width(select(after_intro_target_word, "", !=) and select(indices, indices, <))  * indicator(verb_template_word_indices==num_words_in_output_after_intro) + (1 - indicator(verb_template_word_indices==num_words_in_output_after_intro))*(-1);
+# = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 1, 2, 3, 4, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1] (ints)
+
+# after_intro_word_output_indices has an issue
+word_output_indices = (1-indicator(input_section_idx == OUTPUT_IDX)*(1 - indicator(guess_at_output_type == IGNORE_TYPE))) * -1 + (selector_width(select(word_changes_in_output_flat, 1, ==) and select(indices, indices, <=)))*indicator(input_section_idx == OUTPUT_IDX)*(1 - indicator(guess_at_output_type == IGNORE_TYPE));
+after_intro_num_letters_in_current_word_in_output = selector_width(select(indicator(word_output_indices == num_words_in_output), 1, ==));
+
+after_intro_letter_in_current_word = indicator(after_intro_num_letters_in_current_word_in_output == after_intro_target_word_indices)*after_intro_target_word;
+
+v = aggregate(select(after_intro_target_word_indices, after_intro_num_letters_in_current_word_in_output, ==), indices);
+after_intro_letter_in_current_word = aggregate(select(indices, v, ==) and select(v, 0, >), after_intro_letter_in_current_word); # can simplify last few steps into 1
+after_intro_num_letters_in_current_word_in_input = selector_width(select(verb_template_word_indices, num_words_in_output_after_intro, ==));
+after_intro_letter_in_current_word = " " if (after_intro_num_letters_in_current_word_in_output == after_intro_num_letters_in_current_word_in_input) else after_intro_letter_in_current_word;
+post_nv_introduction_output = after_intro_letter_in_current_word if (sp_after_intro % 6) == 0 else post_nv_introduction_output;
+post_nv_introduction_output = ("(" if after_intro_num_open_paren_in_output < num_words_in_output_after_intro else " ") if (sp_after_intro % 6) == 1 else post_nv_introduction_output;
+# compute index of verb or noun word (may want to update the intro earlier to use the original word index of the verb or noun so it can be copied here easier by aggregating word_indices by word type)
+# number or space
+# assuming 1 verb temporarily for this example
+#idx_for_verb = aggregate(select(sorted_input_type, VERB_TYPE, ==), sorted_word_indices_by_type);
+idx_for_verb = num_nps_and_vs_in_input;
+post_nv_introduction_output = ((idx_for_verb) if (after_intro_num_nums_in_output < 2*num_words_in_output_after_intro - 1) else " ") if ((sp_after_intro % 6) == 2) else post_nv_introduction_output;
+# comma or space
+post_nv_introduction_output = ((",") if (after_intro_num_commas_in_output < num_words_in_output_after_intro) else " ") if ((sp_after_intro % 6) == 3) else post_nv_introduction_output;
+# number or space
+# TODO make this dynamic and support more nouns (but just starting with ONLY transitive verb not omitted example to get the basic decoder loop up)
+idx_for_noun = num_words_in_output_after_intro;
+post_nv_introduction_output = ((idx_for_noun) if (after_intro_num_nums_in_output < 2*num_words_in_output_after_intro) else " ") if ((sp_after_intro % 6) == 4) else post_nv_introduction_output;
+# close paren or space
+post_nv_introduction_output = (")" if after_intro_num_close_paren_in_output < num_words_in_output_after_intro else " ") if (sp_after_intro % 6) == 5 else post_nv_introduction_output;
+output = post_nv_introduction_output if (num_close_paren_in_output >= num_nps_and_vs_in_input) else output;
+
+# Let's run the decoder loop!
+# **This should be able to transform "the boy painted a girl" into a ReCOGS-like form "boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) theme ( 3 , 2 )"**:
+# See https://github.com/willy-b/learning-rasp/pull/1/files#r1803900183 for a discussion of the plan to expand this to support translating the full COGS and hopefully ReCOGS grammars.
+# We print output, but manually append to the example and repeat to run the decoder loop:
+# (You can check that prediction at each step is what is actually supplied the next step.)
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . "
 output;
-#    s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . ") = [b]*131 (strings)
-# DECODER LOOP ITERATION 2
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . b"
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . b"
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . b") = [o]*132 (strings)
-# DECODER LOOP ITERATION 3
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . bo"
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . bo"
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . bo") = [y]*133 (strings)
-# DECODER LOOP ITERATION 4
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy"
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy"
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy") = [ ]*134 (strings)
-# DECODER LOOP ITERATION 5
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy "
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy "
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ") = [(]*135 (strings)
-# DECODER LOOP ITERATION 6
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ("
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ("
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy (") = [ ]*136 (strings)
-# DECODER LOOP ITERATION 7
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( "
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( "
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( ") = [1]*137 (ints)
-# DECODER LOOP ITERATION 8
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1"
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1"
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1") = [ ]*138 (strings)
-# DECODER LOOP ITERATION 9
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 "
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 "
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ") = [)]*139 (strings)
-# DECODER LOOP ITERATION 10
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 )"
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 )"
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 )") = [ ]*140 (strings)
-# DECODER LOOP ITERATION 11
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) "
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) "
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ") = [;]*141 (strings)
-# DECODER LOOP ITERATION 12
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ;"
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ;"
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ;") = [ ]*142 (strings)
-# DECODER LOOP ITERATION 13
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; "
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; "
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; ") = [g]*143 (strings)
-# DECODER LOOP ITERATION 14
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; g"
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; g"
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; g") = [i]*144 (strings)
-# DECODER LOOP ITERATION 15
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; gi"
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; gi"
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; gi") = [r]*145 (strings)
-# DECODER LOOP ITERATION 16
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; gir"
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; gir"
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; gir") = [l]*146 (strings)
-# DECODER LOOP ITERATION 17
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl"
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl"
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl") = [ ]*147 (strings)
-# DECODER LOOP ITERATION 18
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl "
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl "
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ") = [(]*148 (strings)
-# DECODER LOOP ITERATION 19
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ("
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ("
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl (") = [ ]*149 (strings)
-# DECODER LOOP ITERATION 20
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( "
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( "
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( ") = [2]*150 (ints)
-# DECODER LOOP ITERATION 21
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2"
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2"
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2") = [ ]*151 (strings)
-# DECODER LOOP ITERATION 22
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 "
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 "
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ") = [)]*152 (strings)
-# DECODER LOOP ITERATION 23
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 )"
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 )"
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 )") = [ ]*153 (strings)
-# DECODER LOOP ITERATION 24
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) "
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) "
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ") = [;]*154 (strings)
-# DECODER LOOP ITERATION 25
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ;"
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ;"
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ;") = [ ]*155 (strings)
-# DECODER LOOP ITERATION 26
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; "
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; "
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; ") = [p]*156 (strings)
-# DECODER LOOP ITERATION 27
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; p"
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; p"
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; p") = [a]*157 (strings)
-# DECODER LOOP ITERATION 28
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; pa"
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; pa"
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; pa") = [i]*158 (strings)
-# DECODER LOOP ITERATION 29
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; pai"
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; pai"
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; pai") = [n]*159 (strings)
-# DECODER LOOP ITERATION 30
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; pain"
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; pain"
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; pain") = [t]*160 (strings)
-# DECODER LOOP ITERATION 31
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; paint"
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; paint"
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; paint") = [e]*161 (strings)
-# DECODER LOOP ITERATION 32
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painte"
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painte"
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painte") = [d]*162 (strings)
-# DECODER LOOP ITERATION 33
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted"
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted"
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted") = [ ]*163 (strings)
-# DECODER LOOP ITERATION 34
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted "
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted "
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ") = [(]*164 (strings)
-# DECODER LOOP ITERATION 35
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ("
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ("
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted (") = [ ]*165 (strings)
-# DECODER LOOP ITERATION 36
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( "
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( "
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( ") = [3]*166 (ints)
-# DECODER LOOP ITERATION 37
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3"
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3"
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3") = [ ]*167 (strings)
-# DECODER LOOP ITERATION 38
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 "
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 "
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ") = [)]*168 (strings)
-# DECODER LOOP ITERATION 39
-set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 )"
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 )"
 output;
-#     s-op: output
-#         Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . ignore: the a ( 1 2 3 ) ; . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 )") = [ ]*169 (strings)
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) a"
+output;
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) ag"
+output;
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) age"
+output;
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agen"
+output;
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent"
+output;
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ("
+output;
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( "
+output;
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3"
+output;
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 "
+output;
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 ,"
+output;
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , "
+output;
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1"
+output;
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 "
+output;
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 )"
+output;
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) "
+output;
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) t"
+output;
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) th"
+output;
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) the"
+output;
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) them"
+output;
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) theme"
+output;
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) theme "
+output;
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) theme ("
+output;
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) theme ( "
+output;
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) theme ( 3"
+output;
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) theme ( 3 ,"
+output;
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) theme ( 3 , "
+output;
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) theme ( 3 , "
+output;
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) theme ( 3 , 2"
+output;
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) theme ( 3 , 2 )"
+output;
+
+# Which should generate output like:
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . ") = []*154 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . ") = [b]*154 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . ") = [b]*154 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . ") = [b]*154 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . ") = [b]*154 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) ") = [a]*193 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . ") = [b]*154 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . b") = [o]*155 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . bo") = [y]*156 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy") = [ ]*157 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ") = [(]*158 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy (") = [ ]*159 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( ") = [1]*160 (ints)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1") = [ ]*161 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ") = [)]*162 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 )") = [ ]*163 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ") = [;]*164 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ;") = [ ]*165 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; ") = [g]*166 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; g") = [i]*167 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; gi") = [r]*168 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; gir") = [l]*169 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl") = [ ]*170 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ") = [(]*171 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl (") = [ ]*172 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( ") = [2]*173 (ints)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2") = [ ]*174 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ") = [)]*175 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 )") = [ ]*176 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ") = [;]*177 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ;") = [ ]*178 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; ") = [p]*179 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; p") = [a]*180 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; pa") = [i]*181 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; pai") = [n]*182 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; pain") = [t]*183 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; paint") = [e]*184 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painte") = [d]*185 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted") = [ ]*186 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ") = [(]*187 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted (") = [ ]*188 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( ") = [3]*189 (ints)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3") = [ ]*190 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ") = [)]*191 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 )") = [ ]*192 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) a") = [g]*194 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) ag") = [e]*195 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) age") = [n]*196 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agen") = [t]*197 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent") = [ ]*198 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent (") = [ ]*200 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( ") = [3]*201 (ints)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3") = [ ]*202 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 ") = [,]*203 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 ,") = [ ]*204 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , ") = [1]*205 (ints)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1") = [ ]*206 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ") = [)]*207 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 )") = [ ]*208 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) ") = [t]*209 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) t") = [h]*210 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) th") = [e]*211 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) the") = [m]*212 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) them") = [e]*213 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) theme") = [ ]*214 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) theme ") = [(]*215 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) theme (") = [ ]*216 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) theme ( ") = [3]*217 (ints)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) theme ( 3") = [ ]*218 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) theme ( 3 ,") = [ ]*220 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) theme ( 3 , ") = [2]*221 (ints)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) theme ( 3 , ") = [2]*221 (ints)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) theme ( 3 , 2") = [ ]*222 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) theme ( 3 , 2 ") = [)]*223 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) theme ( 3 , 2 )") = [ ]*224 (strings)
+
+# See https://github.com/willy-b/learning-rasp/pull/1/files#r1803900183 for a discussion of the plan to expand this to support translating the full COGS and hopefully ReCOGS grammars.
