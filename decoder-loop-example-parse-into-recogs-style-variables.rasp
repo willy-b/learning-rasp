@@ -11,7 +11,7 @@
 
 # Let's start with some few nouns and verbs from ReCOGS vocab, not using more for easier reading.
 set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , . agent theme . the boy painted a girl ."
-#            ^ dictionary lookup from here                                                                                                 ^ input starts here
+#            ^ dictionary lookup from here                                                                                       ^ input starts here
 
 NOUN_TYPE = 0;
 VERB_TYPE = 1;
@@ -474,7 +474,6 @@ output;
 # Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) theme ( 3") = [ ]*218 (strings)
 # Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) theme ( 3 ") = [,]*219 (strings)
 # Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) theme ( 3 ,") = [ ]*220 (strings)
-# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) theme ( 3 , ") = [2]*221 (ints)
 # Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) theme ( 3 , ") = [2]*221 (ints)
 # Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) theme ( 3 , 2") = [ ]*222 (strings)
 # Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) theme ( 3 , 2 ") = [)]*223 (strings)
