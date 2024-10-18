@@ -347,6 +347,8 @@ set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted dr
 output;
 set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 )"
 output;
+set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) "
+output;
 set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) a"
 output;
 set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) ag"
@@ -448,6 +450,7 @@ output;
 # Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3") = [ ]*190 (strings)
 # Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ") = [)]*191 (strings)
 # Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 )") = [ ]*192 (strings)
+# Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) ") = [a]*193 (strings)
 # Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) a") = [g]*194 (strings)
 # Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) ag") = [e]*195 (strings)
 # Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) age") = [n]*196 (strings)
