@@ -1,3 +1,6 @@
+# THIS SINGLE TEMPLATE CHARACTER LEVEL EXAMPLE WAS JUST A STARTING POINT,
+# SEE word-level-pos-tokens-recogs-style-decoder-loop.rasp FOR SUPPORT OF MULTIPLE TEMPLATES COVERING MOST OF THE GRAMMAR.
+
 # Example building on example-word-type-dictionary-lookup.rasp to demo a basic decoder loop parsing out nouns and verbs as numbered variable in a logical form (somewhat ReCOGS style)
 # using Restricted Access Sequence Processing (RASP) (Weiss et al 2021)
 # which expresses the operations Transformer neural networks can perform
