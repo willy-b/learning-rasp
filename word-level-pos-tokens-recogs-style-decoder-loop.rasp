@@ -895,12 +895,6 @@ set example ["the", "girl", "was", "painted", "|", "*", "girl", "("]
 output;
 #     s-op: output
 #         Example: output(['the', 'girl', 'was', 'painted', '|', '*', 'girl', '(']) = [1]*8 (ints)
-set example ["the", "girl", "was", "painted", "|", "*", "girl", "("]]
-#        !! antlr exception: extraneous input ']' expecting {<EOF>, 'set', 's-op', 'selector', 'show', 'full seq display', 'examples', 'exit()', 'exit', 'quit', 'quit()', 'load', 'draw', '(', 'def', '{', 'for', 'aggregate(', '[', 'not', '-', '+', 'round', 'indicator', 'select(', 'range(', 'zip(', 'len(', Float, PosInt, String, Comment, ID}    -- ignoring input
-#set example ["the", "girl", "was", "painted", "|", "*", "girl", "("]
-output;
-#     s-op: output
-#         Example: output(['the', 'girl', 'was', 'painted', '|', '*', 'girl', '(']) = [1]*8 (ints)
 set example ["the", "girl", "was", "painted", "|", "*", "girl", "(", "1"]
 output;
 #     s-op: output
