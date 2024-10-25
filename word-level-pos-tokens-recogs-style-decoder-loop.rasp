@@ -909,7 +909,7 @@ after_intro_target_token = "AND" if (after_intro_num_tokens_in_output_excluding_
 output = after_intro_target_token if (nv_in_output_count >= nv_in_input_count and after_intro_num_tokens_in_output_excluding_asterisks >= 0) else output;
 
 current_pp = aggregate(select(pps_index, nmods_and_pps_in_output_count+1, ==), tokens) if pps_in_input_count > 0 else "";
-current_nmod_token = ("nmod." + current_pp) if pps_in_input_count > 0 and current_pp != 0 after_intro_num_tokens_in_output_excluding_asterisks % 7 == 0 else "";
+current_nmod_token = ("nmod." + current_pp) if (pps_in_input_count > 0 and not (current_pp == 0) and after_intro_num_tokens_in_output_excluding_asterisks % 7 == 0) else "";
 current_nmod_token = "(" if after_intro_num_tokens_in_output_excluding_asterisks % 7 == 1 else current_nmod_token;
 current_nmod_token = (aggregate(select(pps_index, nmods_and_pps_in_output_count, ==), indices)-1) if pps_in_input_count > 0 and after_intro_num_tokens_in_output_excluding_asterisks % 7 == 2 else current_nmod_token;
 current_nmod_token = "," if after_intro_num_tokens_in_output_excluding_asterisks % 7 == 3 else current_nmod_token;
