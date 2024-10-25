@@ -16,8 +16,8 @@
 #     s3: np vp_passive_dat
 #     s4: np vp_external4
 #     vp_external: v_unerg [np v_unerg, done]
-      | v_trans_omissible_p1 [np v_trans_omissible_p1, done]
-      | vp_external1 | vp_external2 | vp_external3 | vp_external5 | vp_external6 | vp_external7
+#      | v_trans_omissible_p1 [np v_trans_omissible_p1, done]
+#      | vp_external1 | vp_external2 | vp_external3 | vp_external5 | vp_external6 | vp_external7
 #     vp_external1: v_unacc_p1 np [np v_unacc np, done]
 #     vp_external2: v_trans_omissible_p2 np [np v_trans_omissible_p2 np, done]
 #     vp_external3: v_trans_not_omissible np [np v_trans_not_omissible np, done]
@@ -142,7 +142,7 @@ def word_level_token_to_part_of_speech_index_non_verbs(word_token) {
 "bucket":7,"skull":7,"beast":7,"lemon":7,"whale":7,"cage":7,"gardner":7,"fox":7,"sink":7,"trainee":7,"dragon":7,"cylinder":7,"monk":7,"bat":7,"headmaster":7,"philosopher":7,"foreigner":7,"worm":7,"chemist":7,"corpse":7,"wolf":7,"torch":7,"sailor":7,"valve":7,"hammer":7,"doll":7,"genius":7,"baron":7,"murderer":7,"bicycle":7,"keyboard":7,"stool":7,"pepper":7,"warrior":7,"pillar":7,"monkey":7,"cassette":7,"broker":7,"bin":7,"emma":8,"liam":8,"olivia":8,"noah":8,"ava":8,"william":8,"isabella":8,"james":8,"sophia":8,"oliver":8,"charlotte":8,"benjamin":8,"mia":8,"elijah":8,"amelia":8,"lucas":8,"harper":8,"mason":8,"evelyn":8,"logan":8,"abigail":8,"alexander":8,"emily":8,"ethan":8,"elizabeth":8,"jacob":8,"mila":8,"michael":8,"ella":8,"daniel":8,"avery":8,"henry":8,"sofia":8,"jackson":8,"camila":8,"sebastian":8,"aria":8,"aiden":8,"scarlett":8,"matthew":8,"victoria":8,"samuel":8,"madison":8,"david":8,"luna":8,"joseph":8,"grace":8,"carter":8,"chloe":8,"owen":8,"penelope":8,"wyatt":8,"layla":8,
 "john":8,"riley":8,"jack":8,"zoey":8,"luke":8,"nora":8,"jayden":8,"lily":8,"dylan":8,"eleanor":8,"grayson":8,"hannah":8,"levi":8,"lillian":8,"isaac":8,"addison":8,"gabriel":8,"aubrey":8,"julian":8,"ellie":8,"mateo":8,"stella":8,"anthony":8,"natalie":8,"jaxon":8,"zoe":8,"lincoln":8,"leah":8,"joshua":8,"hazel":8,"christopher":8,"violet":8,"andrew":8,"aurora":8,"theodore":8,"savannah":8,"caleb":8,"audrey":8,"ryan":8,"brooklyn":8,"asher":8,"bella":8,"nathan":8,"claire":8,"thomas":8,"skylar":8,"leo":8,"lina":8,"paula":8,"charlie":8,"admired":0,"adored":0,"appreciated":0,"ate":0,"attempted":0,"awarded":0,"baked":0,"believed":0,"blessed":0,"broke":0,"broken":0,"brought":0,"burned":0,"call":0,"called":0,"changed":0,"clean":0,"cleaned":0,"collapsed":0,"confessed":0,"cook":0,"cooked":0,"craved":0,"crawl":0,"cried":0,"crumpled":0,"dance":0,"danced":0,"declared":0,"decomposed":0,"discovered":0,"disintegrated":0,"doubled":0,"drawn":0,"dreamed":0,"drew":0,"dust":0,"dusted":0,"eat":0,"eaten":0,
 "enjoyed":0,"enlarged":0,"examined":0,"expected":0,"fed":0,"floated":0,"forwarded":0,"found":0,"frowned":0,"froze":0,"frozen":0,"gasped":0,"gave":0,"giggle":0,"giggled":0,"given":0,"grew":0,"grown":0,"handed":0,"hated":0,"heard":0,"held":0,"helped":0,"hoped":0,"hunt":0,"hunted":0,"imagined":0,"improved":0,"inflated":0,"intended":0,"investigate":0,"investigated":0,"itched":0,"jog":0,"jogged":0,"juggled":0,"knew":0,"known":0,"laughed":0,"lended":0,"liked":0,"loaned":0,"longed":0,"loved":0,"mailed":0,"meant":0,"missed":0,"nap":0,"napped":0,"needed":0,"noticed":0,"nursed":0,"observed":0,"offered":0,"packed":0,"paint":0,"painted":0,"passed":0,"pierced":0,"planned":0,"poked":0,"posted":0,"preferred":0,"promised":0,"proved":0,"ran":0,"read":0,"reddened":0,"rented":0,"respected":0,"returned":0,"rolled":0,"run":0,"said":0,"saw":0,"scoffed":0,"screamed":0,"seen":0,"sent":0,"served":0,"shattered":0,"shipped":0,"shortened":0,"sketch":0,"sketched":0,"sleep":0,"slept":0,"slid":0,"slipped":0,
-"smiled":0,"smirk":0,"smirked":0,"snapped":0,"sneeze":0,"sneezed":0,"snoozed":0,"snored":0,"sold":0,"split":0,"squeezed":0,"squeezed":0,"stabbed":0,"studied":0,"stuttered":0,"supported":0,"talk":0,"talked":0,"teleported":0,"thought":0,"threw":0,"thrown":0,"tolerated":0,"tossed":0,"touched":0,"tried":0,"valued":0,"walk":0,"walked":0,"wanted":0,"wired":0,"wished":0,"worshipped":0,"yearned":0,"|":0,"(":0,")":0,"0":0,"1":0,"2":0,"3":0,"4":0,"5":0,"6":0,"7":0,"8":0,"9":0,";":0,"agent":0,"theme":0,"recipient":0,",":0,"AND":0,"*":0};
+"smiled":0,"smirk":0,"smirked":0,"snapped":0,"sneeze":0,"sneezed":0,"snoozed":0,"snored":0,"sold":0,"split":0,"squeezed":0,"squeezed":0,"stabbed":0,"studied":0,"stuttered":0,"supported":0,"talk":0,"talked":0,"teleported":0,"thought":0,"threw":0,"thrown":0,"tolerated":0,"tossed":0,"touched":0,"tried":0,"valued":0,"walk":0,"walked":0,"wanted":0,"wired":0,"wished":0,"worshipped":0,"yearned":0,"|":0,"(":0,")":0,"0":0,"1":0,"2":0,"3":0,"4":0,"5":0,"6":0,"7":0,"8":0,"9":0,";":0,"agent":0,"theme":0,"recipient":0,",":0,"AND":0,"*":0,"nmod.in":0,"nmod.beside":0,"nmod.on":0};
   # verbs are zero in this map but all words must have an entry
   return word_token_to_part_of_speech_map[word_token];
 }
@@ -169,7 +169,7 @@ def word_level_token_to_part_of_speech_verb_index_1(word_token) {
 "rolled": 15, "froze": 15, "burned": 15, "shortened": 15, "floated": 15, "grew": 15, "slid": 15, "broke": 15, "crumpled": 15, "split": 15, "changed": 15, "snapped": 15, "disintegrated": 15, "collapsed": 15, "decomposed": 15, "doubled": 15, "improved": 15, "inflated": 15, "enlarged": 15, "reddened": 15, "shattered": 15, "blessed": 15, "squeezed": 15,
 "slept": 16, "smiled": 16, "laughed": 16, "sneezed": 16, "cried": 16, "talked": 16, "danced": 16, "jogged": 16, "walked": 16, "ran": 16, "napped": 16, "snoozed": 16, "screamed": 16, "stuttered": 16, "frowned": 16, "giggled": 16, "scoffed": 16, "snored": 16, "smirked": 16, "gasped": 16,
 "walk": 17, "run": 17, "sleep": 17, "sneeze": 17, "nap": 17, "eat": 17, "read": 17, "cook": 17, "hunt": 17, "paint": 17, "talk": 17, "dance": 17, "giggle": 17, "jog": 17, "smirk": 17, "call": 17, "sketch": 17, "dust": 17, "clean": 17, "investigate": 17, "crawl": 17,
-"gave": 18, "lended": 18, "sold": 18, "offered": 18, "fed": 18, "passed": 18, "sent": 18, "rented": 18, "served": 18, "awarded": 18, "brought": 18, "handed": 18, "forwarded": 18, "promised": 18, "mailed": 18, "loaned": 18, "posted": 18, "returned": 18, "slipped": 18, "wired": 18, "teleported": 18, "shipped": 18,"given": 0,"frozen": 0, "grown": 0, "broken": 0, "|": 0,"(":0,")":0,"0":0,"1":0,"2":0,"3":0,"4":0,"5":0,"6":0,"7":0,"8":0,"9":0,";":0,"agent":0,"theme":0,"recipient":0,",":0,"AND":0,"*":0
+"gave": 18, "lended": 18, "sold": 18, "offered": 18, "fed": 18, "passed": 18, "sent": 18, "rented": 18, "served": 18, "awarded": 18, "brought": 18, "handed": 18, "forwarded": 18, "promised": 18, "mailed": 18, "loaned": 18, "posted": 18, "returned": 18, "slipped": 18, "wired": 18, "teleported": 18, "shipped": 18,"given": 0,"frozen": 0, "grown": 0, "broken": 0, "|": 0,"(":0,")":0,"0":0,"1":0,"2":0,"3":0,"4":0,"5":0,"6":0,"7":0,"8":0,"9":0,";":0,"agent":0,"theme":0,"recipient":0,",":0,"AND":0,"*":0,"nmod.in":0,"nmod.beside":0,"nmod.on":0
   };
   return word_token_to_part_of_speech_map_verbs_1[word_token];
 }
@@ -198,7 +198,7 @@ def word_level_token_to_part_of_speech_verb_index_2(word_token) {
 "walk": 0, "run": 0, "sleep": 0, "sneeze": 0, "nap": 0, "eat": 0, "read": 0, "cook": 0, "hunt": 0, "paint": 0, "talk": 0, "dance": 0, "giggle": 0, "jog": 0, "smirk": 0, "call": 0, "sketch": 0, "dust": 0, "clean": 0, "investigate": 0, "crawl": 0,
 "gave": 0, "fed": 0, "teleported": 0, "shipped": 0,
 "given": 19, "lended": 19, "sold": 19, "offered": 19, "fed": 19, "passed": 19, "sent": 19, "rented": 19, "served": 19, "awarded": 19, "brought": 19, "handed": 19, "forwarded": 19, "promised": 19, "mailed": 19, "loaned": 19, "posted": 19, "returned": 19, "slipped": 19, "wired": 19,
-"rolled": 20, "frozen": 20, "burned": 20, "shortened": 20, "floated": 20, "grown": 20, "slid": 20, "broken": 20, "crumpled": 20, "split": 20, "changed": 20, "snapped": 20, "disintegrated": 20, "collapsed": 20, "decomposed": 20, "doubled": 20, "improved": 20, "inflated": 20, "enlarged": 20, "reddened": 20, "shattered": 20, "blessed": 20, "squeezed": 20, "|": 0,"(":0,")":0,"0":0,"1":0,"2":0,"3":0,"4":0,"5":0,"6":0,"7":0,"8":0,"9":0,";":0,"agent":0,"theme":0,"recipient":0,",":0,"AND":0,"*":0
+"rolled": 20, "frozen": 20, "burned": 20, "shortened": 20, "floated": 20, "grown": 20, "slid": 20, "broken": 20, "crumpled": 20, "split": 20, "changed": 20, "snapped": 20, "disintegrated": 20, "collapsed": 20, "decomposed": 20, "doubled": 20, "improved": 20, "inflated": 20, "enlarged": 20, "reddened": 20, "shattered": 20, "blessed": 20, "squeezed": 20, "|": 0,"(":0,")":0,"0":0,"1":0,"2":0,"3":0,"4":0,"5":0,"6":0,"7":0,"8":0,"9":0,";":0,"agent":0,"theme":0,"recipient":0,",":0,"AND":0,"*":0,"nmod.in":0,"nmod.beside":0,"nmod.on":0
  };
  return word_token_to_part_of_speech_map_verbs_2[word_token];
 }
@@ -217,7 +217,7 @@ word_token_to_part_of_speech_map_verbs_3 = {
 # begin verbs
 "admired": 13,"adored": 0,"appreciated": 0,"appreciated": 13,"ate": 0,"attempted": 0,"awarded": 0,"baked": 0,"believed": 13,"blessed": 0,"broke": 0,"broken": 0,"brought": 0,"burned": 0,"call": 0,"called": 0,"changed": 0,"clean": 0,"cleaned": 0,"collapsed": 0,"confessed": 13,"cook": 0,"cooked": 0,"craved": 0,"crawl": 0,"cried": 0,"crumpled": 0,"dance": 0,"danced": 0,"declared": 13,"decomposed": 0,"discovered": 0,"disintegrated": 0,"doubled": 0,"drawn": 0,"dreamed": 13,"drew": 0,"dust": 0,"dusted": 0,"eat": 0,"eaten": 0,"enjoyed": 0,"enlarged": 0,"examined": 0,"expected": 13,"fed": 0,"floated": 0,"forwarded": 0,"found": 0,"frowned": 0,"froze": 0,"frozen": 0,"gasped": 0,"gave": 0,"giggle": 0,"giggled": 0,"given": 0,"grew": 0,"grown": 0,"handed": 0,"hated": 0,"heard": 0,"held": 0,"helped": 0,"hoped": 13,"hunt": 0,"hunted": 0,"imagined": 13,"improved": 0,"inflated": 0,"intended": 0,"investigate": 0,"investigated": 0,"itched": 0,"jog": 0,"jogged": 0,"juggled": 0,"knew": 0,"known": 0,
 "laughed": 0,"lended": 0,"liked": 13,"loaned": 0,"longed": 0,"loved": 0,"mailed": 0,"meant": 13,"missed": 0,"nap": 0,"napped": 0,"needed": 0,"noticed": 0,"noticed": 13,"nursed": 0,"observed": 0,"offered": 0,"packed": 0,"paint": 0,"painted": 0,"passed": 0,"pierced": 0,"planned": 0,"poked": 0,"posted": 0,"preferred": 0,"promised": 0,"proved": 13,"ran": 0,"read": 0,"reddened": 0,"rented": 0,"respected": 13,"returned": 0,"rolled": 0,"run": 0,"said": 13,"saw": 0,"scoffed": 0,"screamed": 0,"seen": 0,"sent": 0,"served": 0,"shattered": 0,"shipped": 0,"shortened": 0,"sketch": 0,"sketched": 0,"sleep": 0,"slept": 0,"slid": 0,"slipped": 0,"smiled": 0,"smirk": 0,"smirked": 0,"snapped": 0,"sneeze": 0,"sneezed": 0,"snoozed": 0,"snored": 0,"sold": 0,"split": 0,"squeezed": 0,"squeezed": 0,"stabbed": 0,"studied": 0,"stuttered": 0,"supported": 13,"talk": 0,"talked": 0,"teleported": 0,"thought": 13,"threw": 0,"thrown": 0,"tolerated": 13,"tossed": 0,"touched": 0,"tried": 0,"valued": 0,"valued": 13,
-"walk": 0,"walked": 0,"wanted": 0,"wired": 0,"wished": 13,"worshipped": 0,"yearned": 0, "|": 0,"(":0,")":0,"0":0,"1":0,"2":0,"3":0,"4":0,"5":0,"6":0,"7":0,"8":0,"9":0,";":0,"agent":0,"theme":0,"recipient":0,",":0,"AND":0,"*":0
+"walk": 0,"walked": 0,"wanted": 0,"wired": 0,"wished": 13,"worshipped": 0,"yearned": 0, "|": 0,"(":0,")":0,"0":0,"1":0,"2":0,"3":0,"4":0,"5":0,"6":0,"7":0,"8":0,"9":0,";":0,"agent":0,"theme":0,"recipient":0,",":0,"AND":0,"*":0,"nmod.in":0,"nmod.beside":0,"nmod.on":0
 };
   return word_token_to_part_of_speech_map_verbs_3[word_token];
 }
@@ -236,7 +236,7 @@ word_token_to_part_of_speech_map_verbs_4 = {
 # begin verbs, all zeroed except 14
 "admired": 0,"adored": 0,"appreciated": 0,"ate": 0,"attempted": 14,"awarded": 0,"baked": 0,"believed": 0,"blessed": 0,"broke": 0,"brought": 0,"burned": 0,"call": 0,"called": 0,"changed": 0,"clean": 0,"cleaned": 0,"collapsed": 0,"confessed": 0,"cook": 0,"cooked": 0,"craved": 14,"crawl": 0,"cried": 0,"crumpled": 0,"dance": 0,"danced": 0,"declared": 0,"decomposed": 0,"discovered": 0,"disintegrated": 0,"doubled": 0,"drawn": 0,"dreamed": 14,"drew": 0,"dust": 0,"dusted": 0,"eat": 0,"eaten": 0,"enjoyed": 14,"enlarged": 0,"examined": 0,"expected": 14,"fed": 0,"floated": 0,"forwarded": 0,"found": 0,"frowned": 0,"froze": 0,"frozen": 0,"gasped": 0,"gave": 0,"giggle": 0,"giggled": 0,"given": 0,"grew": 0,"grown": 0,"handed": 0,"hated": 14,"heard": 0,"held": 0,"helped": 0,"hoped": 14,"hunt": 0,"hunted": 0,"imagined": 0,"improved": 0,"inflated": 0,"intended": 14,"investigate": 0,"investigated": 0,"itched": 14,"jog": 0,"jogged": 0,"juggled": 0,"knew": 0,"known": 0,"laughed": 0,"lended": 0,
 "liked": 14,"loaned": 0,"longed": 14,"loved": 14,"mailed": 0,"meant": 14,"missed": 0,"nap": 0,"napped": 0,"needed": 14,"noticed": 0,"nursed": 0,"observed": 0,"offered": 0,"packed": 0,"paint": 0,"painted": 0,"passed": 0,"pierced": 0,"planned": 14,"poked": 0,"posted": 0,"preferred": 14,"promised": 0,"proved": 0,"ran": 0,"read": 0,"reddened": 0,"rented": 0,"respected": 0,"returned": 0,"rolled": 0,"run": 0,"saw": 0,"scoffed": 0,"screamed": 0,"seen": 0,"sent": 0,"served": 0,"shattered": 0,"shipped": 0,"shortened": 0,"sketch": 0,"sketched": 0,"sleep": 0,"slept": 0,"slid": 0,"slipped": 0,"smiled": 0,"smirk": 0,"smirked": 0,"snapped": 0,"sneeze": 0,"sneezed": 0,"snoozed": 0,"snored": 0,"sold": 0,"split": 0,"squeezed": 0,"stabbed": 0,"studied": 0,"stuttered": 0,"supported": 0,"talk": 0,"talked": 0,"teleported": 0,"thought": 0,"threw": 0,"thrown": 0,"tolerated": 0,"tossed": 0,"touched": 0,"tried": 14,"valued": 0,"walk": 0,"walked": 0,"wanted": 14,"wired": 0,"wished": 14,"worshipped": 0,
-"yearned": 14,"|":0,"(":0,")":0,"0":0,"1":0,"2":0,"3":0,"4":0,"5":0,"6":0,"7":0,"8":0,"9":0,";":0,"agent":0,"theme":0,"recipient":0,",":0,"AND":0,"*":0
+"yearned": 14,"|":0,"(":0,")":0,"0":0,"1":0,"2":0,"3":0,"4":0,"5":0,"6":0,"7":0,"8":0,"9":0,";":0,"agent":0,"theme":0,"recipient":0,",":0,"AND":0,"*":0,"nmod.in":0,"nmod.beside":0,"nmod.on":0
 };
   return word_token_to_part_of_speech_map_verbs_4[word_token];
 }
@@ -712,8 +712,36 @@ output = (";" if (5 * nv_in_input_count - 1 > num_tokens_in_output_excluding_ast
 output = "|" if num_pipes_in_output == 0 else output;
 
 # after introducing variables, fill out the template (starting just assuming one, no support for recursion which of course will be a focus for us shortly just not yet)
+def template_size(template_name) {
+  template_sizes = {
+ "": "",
+ "v_trans_omissible_p1": 1,
+ "v_trans_omissible_p2": 2,
+ "v_trans_omissible_pp_p1": 1,
+ "v_trans_omissible_pp_p2": 2,
+ "v_trans_not_omissible": 2,
+ "v_trans_not_omissible_pp_p1": 1,
+ "v_trans_not_omissible_pp_p2": 2,
+ "v_cp_taking": 2,
+ "v_inf_taking": 2,
+ "v_unacc_p1": 2,
+ "v_unacc_p2": 1,
+ "v_unacc_pp_p1": 1,
+ "v_unacc_pp_p2": 2,
+ "v_unerg": 1,
+ "v_inf": 1,
+ "v_dat_p1": 3,
+ "v_dat_p2": 3,
+ "v_dat_pp_p1": 2,
+ "v_dat_pp_p2": 3,
+ "v_dat_pp_p3": 2,
+ "v_dat_pp_p4": 3 
+  };
+  return template_sizes[template_name];
+}
 def get_template_mapping(template_name, idx) {
 template_mapping1 = {
+ "": "",
  "v_trans_omissible_p1": "agent",
  "v_trans_omissible_p2": "agent",
  "v_trans_omissible_pp_p1": "theme",
@@ -737,6 +765,7 @@ template_mapping1 = {
  "v_dat_pp_p4": "recipient"
 };
 template_mapping2 = {
+ "": "",
  "v_trans_omissible_p1": "",
  "v_trans_omissible_p2": "theme",
  "v_trans_omissible_pp_p1": "",
@@ -760,6 +789,7 @@ template_mapping2 = {
  "v_dat_pp_p4": "theme"
 };
 template_mapping3 = {
+ "": "",
  "v_trans_omissible_p1": "",
  "v_trans_omissible_p2": "",
  "v_trans_omissible_pp_p1": "",
@@ -790,6 +820,12 @@ atr_in_output_sequence = OUTPUT_MASK*(indicator(tokens == "agent" or tokens == "
 agent_theme_recipient_output_count = selector_width(select(atr_in_output_sequence, 1, ==));
 after_intro_idx = (nv_in_output_count - nv_in_input_count + agent_theme_recipient_output_count) if nv_in_output_count >= nv_in_input_count else 0;
 after_intro_num_tokens_in_output_excluding_asterisks = num_tokens_in_output_excluding_asterisks - ((5 * nv_in_input_count));
+
+pps_in_input_sequence = INPUT_MASK*(indicator(pos_tokens == 2));
+pps_in_input_count = selector_width(select(pps_in_input_sequence, 1, ==));
+pps_index = pps_in_input_sequence*selector_width(select(pps_in_input_sequence, 1, ==) and select(indices,indices, <=));
+nmods_and_pps_in_output_sequence = OUTPUT_MASK*(indicator(tokens == "nmod" or tokens == "beside" or tokens=="on" or tokens == "in"));
+nmods_and_pps_in_output_count = selector_width(select(nmods_and_pps_in_output_sequence, 1, ==));
 
 after_intro_target_token = "";
 # target_token ( idx , idx ) AND
@@ -847,7 +883,9 @@ template_name = "v_dat_pp_p3" if (any_v_dat_pp_p3 == 1) else template_name;
 any_v_dat_pp_p4 = aggregate(select(np_was_v_dat_pp_np_by_np, 1, ==), 1);
 template_name = "v_dat_pp_p4" if (any_v_dat_pp_p4 == 1) else template_name;
 
-after_intro_target_token = get_template_mapping(template_name, after_intro_idx) if (after_intro_num_tokens_in_output_excluding_asterisks % 7 == 0) else after_intro_target_token;
+template_mapping_output = get_template_mapping(template_name, after_intro_idx);
+
+after_intro_target_token = template_mapping_output if (after_intro_num_tokens_in_output_excluding_asterisks % 7 == 0) else after_intro_target_token;
 
 after_intro_target_token = "(" if (after_intro_num_tokens_in_output_excluding_asterisks % 7 == 1) else after_intro_target_token;
 
@@ -866,9 +904,24 @@ after_intro_target_token = right_idx if (after_intro_num_tokens_in_output_exclud
 
 after_intro_target_token = ")" if (after_intro_num_tokens_in_output_excluding_asterisks % 7 == 5) else after_intro_target_token;
 
-after_intro_target_token = "AND" if (after_intro_num_tokens_in_output_excluding_asterisks % 7 == 6 and not (get_template_mapping(template_name, after_intro_idx) == "")) else after_intro_target_token;
+after_intro_target_token = "AND" if (after_intro_num_tokens_in_output_excluding_asterisks % 7 == 6 and not (template_mapping_output == "")) else after_intro_target_token;
 
 output = after_intro_target_token if (nv_in_output_count >= nv_in_input_count and after_intro_num_tokens_in_output_excluding_asterisks >= 0) else output;
+
+current_pp = aggregate(select(pps_index, nmods_and_pps_in_output_count+1, ==), tokens) if pps_in_input_count > 0 else "";
+current_nmod_token = ("nmod." + current_pp) if after_intro_num_tokens_in_output_excluding_asterisks % 7 == 0 else "";
+current_nmod_token = "(" if after_intro_num_tokens_in_output_excluding_asterisks % 7 == 1 else current_nmod_token;
+current_nmod_token = (aggregate(select(pps_index, nmods_and_pps_in_output_count+1, ==), indices)-1) if pps_in_input_count > 0 and after_intro_num_tokens_in_output_excluding_asterisks % 7 == 2 else current_nmod_token;
+current_nmod_token = "," if after_intro_num_tokens_in_output_excluding_asterisks % 7 == 3 else current_nmod_token;
+after_nmod_idx = aggregate(select(pps_index, nmods_and_pps_in_output_count+1, ==), indices)+1;
+token_at_after_nmod_idx = aggregate(select(indices, after_nmod_idx, ==), tokens);
+after_nmod_idx = (after_nmod_idx + 1) if (token_at_after_nmod_idx == "the" or token_at_after_nmod_idx == "a") else after_nmod_idx;
+current_nmod_token = (after_nmod_idx) if pps_in_input_count > 0 and after_intro_num_tokens_in_output_excluding_asterisks % 7 == 4 else current_nmod_token;
+current_nmod_token = ")" if after_intro_num_tokens_in_output_excluding_asterisks % 7 == 5 else current_nmod_token;
+current_nmod_token = ("AND" if nmods_and_pps_in_output_count < pps_in_input_count else "") if after_intro_num_tokens_in_output_excluding_asterisks % 7 == 6 else current_nmod_token;
+after_intro_and_relationships_nmod_token = current_nmod_token if nmods_and_pps_in_output_count <= pps_in_input_count else "";
+num_tokens_in_nmod_section = after_intro_num_tokens_in_output_excluding_asterisks - template_size(template_name)*7 + 1;
+output = after_intro_and_relationships_nmod_token if (template_mapping_output == "" and after_intro_num_tokens_in_output_excluding_asterisks >= template_size(template_name)*7 - 1 and num_tokens_in_nmod_section < 7*pps_in_input_count and pps_in_input_count > 0) else output;
 
 # EXAMPLES!
 # Let us translate a group of related sentences to logical forms (LF) using this system to show our progress.
@@ -1249,8 +1302,7 @@ output;
 output;
 #     s-op: output
 #         Example: output(['the', 'girl', 'was', 'painted', 'by', 'a', 'boy', '|', '*', 'girl', '(', '1', ')', ';', 'boy', '(', '6', ')', ';', 'painted', '(', '3', ')', 'AND', 'theme', '(', '3', ',', '1', ')']) = [AND]*30 (strings)
-   set example ["the","girl","was","painted","by","a","boy", "|", "*", "girl", "(", "1", ")", ";", "boy", "(", "6", ")", ";", "painted", "(", "3", ")", "AND", "theme", "(", "3", ",", "1", ")", "AND"]
->> 
+set example ["the","girl","was","painted","by","a","boy", "|", "*", "girl", "(", "1", ")", ";", "boy", "(", "6", ")", ";", "painted", "(", "3", ")", "AND", "theme", "(", "3", ",", "1", ")", "AND"]
 output;
 #     s-op: output
 #         Example: output(['the', 'girl', 'was', 'painted', 'by', 'a', 'boy', '|', '*', 'girl', '(', '1', ')', ';', 'boy', '(', '6', ')', ';', 'painted', '(', '3', ')', 'AND', 'theme', '(', '3', ',', '1', ')', 'AND']) = [agent]*31 (strings)
@@ -1378,7 +1430,7 @@ output;
 output;
 #     s-op: output
 #         Example: output(['the', 'book', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', 'benjamin', '(', '5', ')', ';', 'cat', '(', '8', ')', ';', 'lended', '(', '3', ')']) = [AND]*30 (strings)
-   set example ["the", "book","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "benjamin", "(", "5", ")", ";", "cat", "(", "8", ")", ";", "lended", "(", "3", ")", "AND"]
+set example ["the", "book","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "benjamin", "(", "5", ")", ";", "cat", "(", "8", ")", ";", "lended", "(", "3", ")", "AND"]
 output;
 #     s-op: output
 #         Example: output(['the', 'book', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', 'benjamin', '(', '5', ')', ';', 'cat', '(', '8', ')', ';', 'lended', '(', '3', ')', 'AND']) = [theme]*31 (strings)
