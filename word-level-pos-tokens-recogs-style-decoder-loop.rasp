@@ -890,11 +890,27 @@ after_intro_target_token = template_mapping_output if (after_intro_num_tokens_in
 after_intro_target_token = "(" if (after_intro_num_tokens_in_output_excluding_asterisks % 7 == 1) else after_intro_target_token;
 
 # TODO get nps relative to the actual verb position
-left_idx_in_nps_zero_based = nv_in_output_count-1;
-right_idx_in_nps_zero_based = after_intro_idx-1;
+left_idx_in_nps_zero_based = nv_in_output_count-1; # the one verb supported so far
+# select against nv index excluding any (pp np ; do not confuse with np_pp, we want the left most child of np_pp)
+# create a sequence of np_det,np_prop indices excluding any np which is preceded by pp
+
+pp_sequence = indicator(pos_tokens == 2);
+pp_one_after_mask = select(pp_sequence, 1, ==) and select(indices+1, indices, ==);
+pp_one_after_sequence = aggregate(pp_one_after_mask, 1);
+pp_one_after_mask = select(pp_one_after_sequence, 1, ==) and select(indices, indices, ==);
+
+pp_two_after_mask = select(pp_sequence, 1, ==) and select(indices+2, indices, ==);
+pp_two_after_sequence = aggregate(pp_two_after_mask, 1);
+pp_two_after_mask = select(pp_two_after_sequence, 1, ==) and select(indices, indices, ==);
+
+np_det_diag_mask = select(aggregate(np_det_mask, 1), 1, ==) and select(indices, indices, ==);
+np_prop_diag_mask = select(aggregate(np_prop_mask, 1), 1, ==) and select(indices, indices, ==);
+
+no_pp_np_mask = 1 - aggregate((pp_one_after_mask and np_prop_diag_mask) or (pp_two_after_mask and np_det_diag_mask), 1);
+nps_without_pp_prefix_indices = selector_width(select(NOUN_MASK*no_pp_np_mask, 1, ==) and select(indices, indices, <=))*NOUN_MASK*no_pp_np_mask;
 
 left_idx = aggregate(select(indices, left_idx_in_nps_zero_based, ==), input_indices_sorted);
-right_idx = aggregate(select(indices, right_idx_in_nps_zero_based, ==), input_indices_sorted);
+right_idx = aggregate(select(nps_without_pp_prefix_indices, after_intro_idx, ==), indices);
 
 after_intro_target_token = left_idx if (after_intro_num_tokens_in_output_excluding_asterisks % 7 == 2) else after_intro_target_token;
 
@@ -1518,7 +1534,7 @@ output;
 
 # which gives "a boy painted the girl in the house" -> "boy ( 1 ) ; * girl ( 4 ) ; * house ( 7 ) ; painted ( 2 ) AND agent ( 2 , 1 ) AND theme ( 2 , 4 ) AND nmod.in ( 4 , 7 )"
 
-# We can also do a more complicated example from the ReCOGS training dataset
+# We can also do a more complicated example from the ReCOGS training dataset (note I am only supporting COGS grammar, not ReCOGS grammar so far though I am outputting ReCOGS LF, so really cannot cover many ReCOGS sentences, e.g. preposed modifications or ones with "um um" sprinkles).
 # https://github.com/frankaging/ReCOGS/blob/1b6eca8ff4dca5fd2fb284a7d470998af5083beb/recogs_positional_index/train.tsv#L15
 # Translating "the book was lended to benjamin by a cat" to logical form "* book ( 1 ) ; benjamin ( 5 ) ; cat ( 8 ) ; lended ( 3 ) AND theme ( 3 , 1 ) AND recipient ( 3 , 5 ) AND agent ( 3 , 8 )" with the same code.
 
@@ -1696,3 +1712,234 @@ output;
 #         Example: output(['the', 'book', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', 'benjamin', '(', '5', ')', ';', 'cat', '(', '8', ')', ';', 'lended', '(', '3', ')', 'AND', 'theme', '(', '3', ',', '1', ')', 'AND', 'recipient', '(', '3', ',', '5', ')', 'AND', 'agent', '(', '3', ',', '8', ')']) = []*51 (strings)
 
 # "the book was lended to benjamin by a cat" translated to "* book ( 1 ) ; benjamin ( 5 ) ; cat ( 8 ) ; lended ( 3 ) AND theme ( 3 , 1 ) AND recipient ( 3 , 5 ) AND agent ( 3 , 8 )"
+
+# let's try the same example but with a subject noun phrase prepositional phrase modifier (pp modification left of the verb)
+# Let's try to translate "the book on the table was lended to benjamin by a cat" to "* book ( 1 ) ; * table ( 4 ) ; benjamin ( 8 ) ; cat ( 11 ) ; lended ( 6 ) AND theme ( 6 , 1 ) AND recipient ( 6 , 8 ) AND agent ( 6 , 11 ) AND nmod.on ( 1 , 4 )"
+# (Recall we force the input at each step but you can verify it predicted the correct next token at each step, before we provided it; I generated the inputs by feeding back the outputs)
+set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat']) = [|]*12 (strings)
+set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|']) = [*]*13 (strings)
+set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*']) = [book]*14 (strings)
+set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book']) = [(]*15 (strings)
+set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "("]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(']) = [1]*16 (ints)
+set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1']) = [)]*17 (strings)
+set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')']) = [;]*18 (strings)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';']) = [*]*19 (strings)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*']) = [table]*20 (strings)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table']) = [(]*21 (strings)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "("]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(']) = [4]*22 (ints)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4']) = [)]*23 (strings)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')']) = [;]*24 (strings)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';']) = [benjamin]*25 (strings)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin']) = [(]*26 (strings)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "("]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(']) = [8]*27 (ints)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8']) = [)]*28 (strings)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')']) = [;]*29 (strings)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';']) = [cat]*30 (strings)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";", "cat"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';', 'cat']) = [(]*31 (strings)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";", "cat", "("]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';', 'cat', '(']) = [11]*32 (ints)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";", "cat", "(", "11"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';', 'cat', '(', '11']) = [)]*33 (strings)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";", "cat", "(", "11", ")"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';', 'cat', '(', '11', ')']) = [;]*34 (strings)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";", "cat", "(", "11", ")", ";"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';', 'cat', '(', '11', ')', ';']) = [lended]*35 (strings)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";", "cat", "(", "11", ")", ";", "lended"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';', 'cat', '(', '11', ')', ';', 'lended']) = [(]*36 (strings)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";", "cat", "(", "11", ")", ";", "lended", "("]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';', 'cat', '(', '11', ')', ';', 'lended', '(']) = [6]*37 (ints)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";", "cat", "(", "11", ")", ";", "lended", "(", "6"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';', 'cat', '(', '11', ')', ';', 'lended', '(', '6']) = [)]*38 (strings)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";", "cat", "(", "11", ")", ";", "lended", "(", "6", ")"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';', 'cat', '(', '11', ')', ';', 'lended', '(', '6', ')']) = [AND]*39 (strings)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";", "cat", "(", "11", ")", ";", "lended", "(", "6", ")", "AND"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';', 'cat', '(', '11', ')', ';', 'lended', '(', '6', ')', 'AND']) = [theme]*40 (strings)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";", "cat", "(", "11", ")", ";", "lended", "(", "6", ")", "AND", "theme"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';', 'cat', '(', '11', ')', ';', 'lended', '(', '6', ')', 'AND', 'theme']) = [(]*41 (strings)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";", "cat", "(", "11", ")", ";", "lended", "(", "6", ")", "AND", "theme", "("]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';', 'cat', '(', '11', ')', ';', 'lended', '(', '6', ')', 'AND', 'theme', '(']) = [6]*42 (ints)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";", "cat", "(", "11", ")", ";", "lended", "(", "6", ")", "AND", "theme", "(", "6"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';', 'cat', '(', '11', ')', ';', 'lended', '(', '6', ')', 'AND', 'theme', '(', '6']) = [,]*43 (strings)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";", "cat", "(", "11", ")", ";", "lended", "(", "6", ")", "AND", "theme", "(", "6", ","]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';', 'cat', '(', '11', ')', ';', 'lended', '(', '6', ')', 'AND', 'theme', '(', '6', ',']) = [1]*44 (ints)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";", "cat", "(", "11", ")", ";", "lended", "(", "6", ")", "AND", "theme", "(", "6", ",", "1"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';', 'cat', '(', '11', ')', ';', 'lended', '(', '6', ')', 'AND', 'theme', '(', '6', ',', '1']) = [)]*45 (strings)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";", "cat", "(", "11", ")", ";", "lended", "(", "6", ")", "AND", "theme", "(", "6", ",", "1", ")"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';', 'cat', '(', '11', ')', ';', 'lended', '(', '6', ')', 'AND', 'theme', '(', '6', ',', '1', ')']) = [AND]*46 (strings)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";", "cat", "(", "11", ")", ";", "lended", "(", "6", ")", "AND", "theme", "(", "6", ",", "1", ")", "AND"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';', 'cat', '(', '11', ')', ';', 'lended', '(', '6', ')', 'AND', 'theme', '(', '6', ',', '1', ')', 'AND']) = [recipient]*47 (strings)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";", "cat", "(", "11", ")", ";", "lended", "(", "6", ")", "AND", "theme", "(", "6", ",", "1", ")", "AND", "recipient"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';', 'cat', '(', '11', ')', ';', 'lended', '(', '6', ')', 'AND', 'theme', '(', '6', ',', '1', ')', 'AND', 'recipient']) = [(]*48 (strings)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";", "cat", "(", "11", ")", ";", "lended", "(", "6", ")", "AND", "theme", "(", "6", ",", "1", ")", "AND", "recipient", "("]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';', 'cat', '(', '11', ')', ';', 'lended', '(', '6', ')', 'AND', 'theme', '(', '6', ',', '1', ')', 'AND', 'recipient', '(']) = [6]*49 (ints)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";", "cat", "(", "11", ")", ";", "lended", "(", "6", ")", "AND", "theme", "(", "6", ",", "1", ")", "AND", "recipient", "(", "6"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';', 'cat', '(', '11', ')', ';', 'lended', '(', '6', ')', 'AND', 'theme', '(', '6', ',', '1', ')', 'AND', 'recipient', '(', '6']) = [,]*50 (strings)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";", "cat", "(", "11", ")", ";", "lended", "(", "6", ")", "AND", "theme", "(", "6", ",", "1", ")", "AND", "recipient", "(", "6", ","]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';', 'cat', '(', '11', ')', ';', 'lended', '(', '6', ')', 'AND', 'theme', '(', '6', ',', '1', ')', 'AND', 'recipient', '(', '6', ',']) = [8]*51 (ints)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";", "cat", "(", "11", ")", ";", "lended", "(", "6", ")", "AND", "theme", "(", "6", ",", "1", ")", "AND", "recipient", "(", "6", ",", "8"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';', 'cat', '(', '11', ')', ';', 'lended', '(', '6', ')', 'AND', 'theme', '(', '6', ',', '1', ')', 'AND', 'recipient', '(', '6', ',', '8']) = [)]*52 (strings)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";", "cat", "(", "11", ")", ";", "lended", "(", "6", ")", "AND", "theme", "(", "6", ",", "1", ")", "AND", "recipient", "(", "6", ",", "8", ")"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';', 'cat', '(', '11', ')', ';', 'lended', '(', '6', ')', 'AND', 'theme', '(', '6', ',', '1', ')', 'AND', 'recipient', '(', '6', ',', '8', ')']) = [AND]*53 (strings)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";", "cat", "(", "11", ")", ";", "lended", "(", "6", ")", "AND", "theme", "(", "6", ",", "1", ")", "AND", "recipient", "(", "6", ",", "8", ")", "AND"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';', 'cat', '(', '11', ')', ';', 'lended', '(', '6', ')', 'AND', 'theme', '(', '6', ',', '1', ')', 'AND', 'recipient', '(', '6', ',', '8', ')', 'AND']) = [agent]*54 (strings)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";", "cat", "(", "11", ")", ";", "lended", "(", "6", ")", "AND", "theme", "(", "6", ",", "1", ")", "AND", "recipient", "(", "6", ",", "8", ")", "AND", "agent"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';', 'cat', '(', '11', ')', ';', 'lended', '(', '6', ')', 'AND', 'theme', '(', '6', ',', '1', ')', 'AND', 'recipient', '(', '6', ',', '8', ')', 'AND', 'agent']) = [(]*55 (strings)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";", "cat", "(", "11", ")", ";", "lended", "(", "6", ")", "AND", "theme", "(", "6", ",", "1", ")", "AND", "recipient", "(", "6", ",", "8", ")", "AND", "agent", "("]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';', 'cat', '(', '11', ')', ';', 'lended', '(', '6', ')', 'AND', 'theme', '(', '6', ',', '1', ')', 'AND', 'recipient', '(', '6', ',', '8', ')', 'AND', 'agent', '(']) = [6]*56 (ints)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";", "cat", "(", "11", ")", ";", "lended", "(", "6", ")", "AND", "theme", "(", "6", ",", "1", ")", "AND", "recipient", "(", "6", ",", "8", ")", "AND", "agent", "(", "6"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';', 'cat', '(', '11', ')', ';', 'lended', '(', '6', ')', 'AND', 'theme', '(', '6', ',', '1', ')', 'AND', 'recipient', '(', '6', ',', '8', ')', 'AND', 'agent', '(', '6']) = [,]*57 (strings)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";", "cat", "(", "11", ")", ";", "lended", "(", "6", ")", "AND", "theme", "(", "6", ",", "1", ")", "AND", "recipient", "(", "6", ",", "8", ")", "AND", "agent", "(", "6", ","]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';', 'cat', '(', '11', ')', ';', 'lended', '(', '6', ')', 'AND', 'theme', '(', '6', ',', '1', ')', 'AND', 'recipient', '(', '6', ',', '8', ')', 'AND', 'agent', '(', '6', ',']) = [11]*58 (ints)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";", "cat", "(", "11", ")", ";", "lended", "(", "6", ")", "AND", "theme", "(", "6", ",", "1", ")", "AND", "recipient", "(", "6", ",", "8", ")", "AND", "agent", "(", "6", ",", "11"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';', 'cat', '(', '11', ')', ';', 'lended', '(', '6', ')', 'AND', 'theme', '(', '6', ',', '1', ')', 'AND', 'recipient', '(', '6', ',', '8', ')', 'AND', 'agent', '(', '6', ',', '11']) = [)]*59 (strings)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";", "cat", "(", "11", ")", ";", "lended", "(", "6", ")", "AND", "theme", "(", "6", ",", "1", ")", "AND", "recipient", "(", "6", ",", "8", ")", "AND", "agent", "(", "6", ",", "11", ")"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';', 'cat', '(', '11', ')', ';', 'lended', '(', '6', ')', 'AND', 'theme', '(', '6', ',', '1', ')', 'AND', 'recipient', '(', '6', ',', '8', ')', 'AND', 'agent', '(', '6', ',', '11', ')']) = [AND]*60 (strings)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";", "cat", "(", "11", ")", ";", "lended", "(", "6", ")", "AND", "theme", "(", "6", ",", "1", ")", "AND", "recipient", "(", "6", ",", "8", ")", "AND", "agent", "(", "6", ",", "11", ")", "AND"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';', 'cat', '(', '11', ')', ';', 'lended', '(', '6', ')', 'AND', 'theme', '(', '6', ',', '1', ')', 'AND', 'recipient', '(', '6', ',', '8', ')', 'AND', 'agent', '(', '6', ',', '11', ')', 'AND']) = [nmod.on]*61 (strings)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";", "cat", "(", "11", ")", ";", "lended", "(", "6", ")", "AND", "theme", "(", "6", ",", "1", ")", "AND", "recipient", "(", "6", ",", "8", ")", "AND", "agent", "(", "6", ",", "11", ")", "AND" , "nmod.on"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';', 'cat', '(', '11', ')', ';', 'lended', '(', '6', ')', 'AND', 'theme', '(', '6', ',', '1', ')', 'AND', 'recipient', '(', '6', ',', '8', ')', 'AND', 'agent', '(', '6', ',', '11', ')', 'AND', 'nmod.on']) = [(]*62 (strings)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";", "cat", "(", "11", ")", ";", "lended", "(", "6", ")", "AND", "theme", "(", "6", ",", "1", ")", "AND", "recipient", "(", "6", ",", "8", ")", "AND", "agent", "(", "6", ",", "11", ")", "AND" , "nmod.on", "("]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';', 'cat', '(', '11', ')', ';', 'lended', '(', '6', ')', 'AND', 'theme', '(', '6', ',', '1', ')', 'AND', 'recipient', '(', '6', ',', '8', ')', 'AND', 'agent', '(', '6', ',', '11', ')', 'AND', 'nmod.on', '(']) = [1]*63 (ints)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";", "cat", "(", "11", ")", ";", "lended", "(", "6", ")", "AND", "theme", "(", "6", ",", "1", ")", "AND", "recipient", "(", "6", ",", "8", ")", "AND", "agent", "(", "6", ",", "11", ")", "AND" , "nmod.on", "(", "1"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';', 'cat', '(', '11', ')', ';', 'lended', '(', '6', ')', 'AND', 'theme', '(', '6', ',', '1', ')', 'AND', 'recipient', '(', '6', ',', '8', ')', 'AND', 'agent', '(', '6', ',', '11', ')', 'AND', 'nmod.on', '(', '1']) = [,]*64 (strings)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";", "cat", "(", "11", ")", ";", "lended", "(", "6", ")", "AND", "theme", "(", "6", ",", "1", ")", "AND", "recipient", "(", "6", ",", "8", ")", "AND", "agent", "(", "6", ",", "11", ")", "AND" , "nmod.on", "(", "1", ","]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';', 'cat', '(', '11', ')', ';', 'lended', '(', '6', ')', 'AND', 'theme', '(', '6', ',', '1', ')', 'AND', 'recipient', '(', '6', ',', '8', ')', 'AND', 'agent', '(', '6', ',', '11', ')', 'AND', 'nmod.on', '(', '1', ',']) = [4]*65 (ints)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";", "cat", "(", "11", ")", ";", "lended", "(", "6", ")", "AND", "theme", "(", "6", ",", "1", ")", "AND", "recipient", "(", "6", ",", "8", ")", "AND", "agent", "(", "6", ",", "11", ")", "AND" , "nmod.on", "(", "1", ",", "4"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';', 'cat', '(', '11', ')', ';', 'lended', '(', '6', ')', 'AND', 'theme', '(', '6', ',', '1', ')', 'AND', 'recipient', '(', '6', ',', '8', ')', 'AND', 'agent', '(', '6', ',', '11', ')', 'AND', 'nmod.on', '(', '1', ',', '4']) = [)]*66 (strings)
+   set example ["the", "book","on","the","table","was","lended","to", "benjamin", "by", "a", "cat", "|", "*", "book", "(", "1", ")", ";", "*", "table", "(", "4", ")", ";", "benjamin", "(", "8", ")", ";", "cat", "(", "11", ")", ";", "lended", "(", "6", ")", "AND", "theme", "(", "6", ",", "1", ")", "AND", "recipient", "(", "6", ",", "8", ")", "AND", "agent", "(", "6", ",", "11", ")", "AND" , "nmod.on", "(", "1", ",", "4", ")"]
+output;
+#     s-op: output
+#         Example: output(['the', 'book', 'on', 'the', 'table', 'was', 'lended', 'to', 'benjamin', 'by', 'a', 'cat', '|', '*', 'book', '(', '1', ')', ';', '*', 'table', '(', '4', ')', ';', 'benjamin', '(', '8', ')', ';', 'cat', '(', '11', ')', ';', 'lended', '(', '6', ')', 'AND', 'theme', '(', '6', ',', '1', ')', 'AND', 'recipient', '(', '6', ',', '8', ')', 'AND', 'agent', '(', '6', ',', '11', ')', 'AND', 'nmod.on', '(', '1', ',', '4', ')']) = []*67 (strings)
+
+# Thus we translate "the book on the table was lended to benjamin by a cat" 
+# to "* book ( 1 ) ; * table ( 4 ) ; benjamin ( 8 ) ; cat ( 11 ) ; lended ( 6 ) AND theme ( 6 , 1 ) AND recipient ( 6 , 8 ) AND agent ( 6 , 11 ) AND nmod.on ( 1 , 4 )"
