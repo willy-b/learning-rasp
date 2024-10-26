@@ -844,6 +844,15 @@ template_name = "v_trans_omissible_pp_p1" if (any_v_trans_omissible_pp_p1 == 1) 
 any_v_trans_omissible_pp_p2 = aggregate(select(np_was_v_trans_omissible_pp_by_np, 1, ==), 1);
 template_name = "v_trans_omissible_pp_p2" if (any_v_trans_omissible_pp_p2 == 1) else template_name;
 
+any_v_trans_not_omissible = aggregate(select(np_v_trans_not_omissible_np, 1, ==), 1);
+template_name = "v_trans_not_omissible" if (any_v_trans_not_omissible == 1) else template_name;
+
+any_v_trans_not_omissible_pp_p1 = aggregate(select(np_was_v_trans_not_omissible_pp_p1, 1, ==), 1);
+template_name = "v_trans_not_omissible_pp_p1" if (any_v_trans_not_omissible_pp_p1 == 1) else template_name;
+
+any_v_trans_not_omissible_pp_p2 = aggregate(select(np_was_v_trans_not_omissible_pp_p2_by_np, 1, ==), 1);
+template_name = "v_trans_not_omissible_pp_p2" if (any_v_trans_not_omissible_pp_p2 == 1) else template_name;
+
 any_v_inf_taking = aggregate(select(np_v_inf_taking_to_v_inf, 1, ==), 1);
 template_name = "v_inf_taking" if (any_v_inf_taking == 1) else template_name;
 
