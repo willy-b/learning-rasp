@@ -470,10 +470,13 @@ np_det_left_mask = select(np_det_sequence, 1, ==) and select(indices-1, indices,
 np_det_left_sequence = aggregate(np_det_left_mask, 1);
 np_det_left_mask = select(np_det_left_sequence, 1, ==) and select(indices, indices, ==);
 np_pp_iobj_sequence = aggregate((np_prop_mask and pp_iobj_before_mask) or (np_det_left_mask and pp_iobj_two_before_mask), 1.0);
-np_pp_iobj_before_mask = select(np_pp_iobj_sequence, 1, ==) and select(indices-1, indices, ==);
+# TODO replace this with strict handling of prepositional phrase chains in np_v_dat_p_np_pp_iobj
+any_np_pp_iobj_before_mask = select(np_pp_iobj_sequence, 1, ==) and select(indices, indices, >);
+any_np_pp_iobj_before_sequence = aggregate(any_np_pp_iobj_before_mask, 1);
+any_np_pp_iobj_before_mask = select(any_np_pp_iobj_before_sequence, 1, ==) and select(indices, indices, ==);
 np_pp_iobj_before_sequence = aggregate(np_pp_iobj_before_mask, 1);
 np_pp_iobj_before_mask = select(np_pp_iobj_before_sequence, 1, ==) and select(indices, indices, ==);
-np_v_dat_p_np_pp_iobj = aggregate(np_after_mask and v_dat_mask and np_pp_iobj_before_mask, 1.0);
+np_v_dat_p_np_pp_iobj = aggregate(np_after_mask and v_dat_mask and any_np_pp_iobj_before_mask, 1.0);
 # Example: np_v_dat_p_np_pp_iobj(['ella', 'sold', 'a', 'car', 'to', 'the', 'customer']) = [0, 1.0, 0, 0, 0, 0, 0] (floats)
 
 # np v_dat_p2 np np
@@ -721,7 +724,7 @@ output = "|" if num_pipes_in_output == 0 else output;
 # after introducing variables, fill out the template (starting just assuming one, no support for recursion which of course will be a focus for us shortly just not yet)
 def template_size(template_name) {
   template_sizes = {
- "": "",
+ "": 0,
  "v_trans_omissible_p1": 1,
  "v_trans_omissible_p2": 2,
  "v_trans_omissible_pp_p1": 1,
