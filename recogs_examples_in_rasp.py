@@ -5,7 +5,9 @@ import pandas as pd
 import numpy as np
 
 base_path = os.path.abspath(".")
-# load dependency if not available
+# Load dependency if not available.
+# we use the Restricted Access Sequence Processing interpreter from "Thinking Like Transformers" Weiss et al 2021 ( https://arxiv.org/abs/2106.06981 )
+# This RASP is an academic language which can be theoretically compiled to Transformer neural network weights, useful for thinking about Transformer capabilities.
 print("Note the RASP dependency requires python3.10-venv and its own dependencies; if there are errors please check the RASP dependencies' instructions (and run `apt install python3.10-venv` or equivalent for your operating system)")
 if not os.path.exists(base_path + "/RASP"):
   subprocess.run("git clone https://github.com/tech-srl/RASP.git", shell=True, executable='/bin/bash')
@@ -37,7 +39,7 @@ stdout_handle = os.fdopen(main)
 
 with open(base_path + "/" + "word-level-pos-tokens-recogs-style-decoder-loop.rasp", "r") as f:
   rasp_setup_lines = f.readlines()
-input_lines = [bytes(line, 'utf8') for line in rasp_setup_lines[:980]]
+input_lines = [bytes(line, 'utf8') for line in rasp_setup_lines]
 
 stdin_handle.writelines(input_lines)
 stdin_handle.flush()
@@ -73,6 +75,18 @@ def process_example(example, suppress_output=True, debug_mode=False):
   if not suppress_output:
     print(f"{translation[0]}\n{translation[1]}")
   return translation[1]
+
+print("""
+
+Note, it is simpler and more performant to just train the Transformer on examples!
+This is an academic exercise, writing a neural network compatible program
+by hand in the Restricted Access Sequence Processing (compilable to Transformer)
+language (Weiss et al 2021, https://arxiv.org/abs/2106.06981 ) to work towards
+eventually proving a Transformer can perform a particular type of solution
+(we will be building a grammar based and compositional solution
+we can prove things about).
+
+""")
 
 print("Run one example (two semantically identical but syntactically different forms) before loading the dataset:")
 
