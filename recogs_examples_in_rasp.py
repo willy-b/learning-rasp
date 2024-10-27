@@ -110,7 +110,7 @@ lfs_computed = [process_example(sentence, False) for sentence in sentences]
 # note not finished with the grammar yet and it will systematically miss the v_inf_taking_to_v_inf (e.g. "the scientist wanted to read") due to misordered output vs reference
 # in ReCOGS "semantic exact match" they would still be correct as it ignores semantically meaningless reorderings but I am scoring with exact match here for the time being
 
-exact_matches = [1.0 if lfs_computed[idx].strip().lower() == lfs_true[idx].strip().lower().replace(" . ", ".") else 0.0 for idx in range(len(lfs_computed))]
+exact_matches = [1.0 if lfs_computed[idx].strip().lower() == lfs_true[idx].strip().lower() else 0.0 for idx in range(len(lfs_computed))]
 mean_em_score = np.array(exact_matches).mean()
 num_right = np.array(exact_matches).sum()
 
