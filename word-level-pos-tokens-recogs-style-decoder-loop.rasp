@@ -489,8 +489,9 @@ np_v_dat_p_np_np = aggregate(np_after_mask and v_dat_mask and np_np_before_mask,
 # Example: np_v_dat_p_np_np([8, 18, 1, 7, 1, 7]) = [0, 1, 0, 0, 0, 0] (ints)
 
 # np was v_dat_pp_p4 np by np
-# e.g. [1,7,3,18,1,7,4,8]
+# e.g. [1,7,3,19,1,7,4,8]
 set example ["the","customer","was","sold","a","car","by","ella"]
+v_dat_pp_mask = select(19, pos_tokens_vmap2, ==) and select(indices, indices, ==);
 by_np_sequence = aggregate(np_before_mask and by_mask, 1);
 by_np_before_mask = select(by_np_sequence, 1, ==) and select(indices-1, indices, ==);
 by_np_before_sequence = aggregate(by_np_before_mask, 1);
@@ -502,21 +503,20 @@ np_by_np_sequence = aggregate((np_prop_mask and by_np_before_mask) or (np_det_le
 np_by_np_before_mask = select(np_by_np_sequence, 1, ==) and select(indices-1, indices, ==);
 np_by_np_before_sequence = aggregate(np_by_np_before_mask, 1);
 np_by_np_before_mask = select(np_by_np_before_sequence, 1, ==) and select(indices, indices, ==);
-np_was_v_dat_pp_np_by_np = aggregate(np_two_after_mask and was_after and v_dat_mask and np_by_np_before_mask, 1.0);
+np_was_v_dat_pp_np_by_np = aggregate(np_two_after_mask and was_after and v_dat_pp_mask and np_by_np_before_mask, 1.0);
 # Example: np_was_v_dat_pp_np_by_np(['the', 'customer', 'was', 'sold', 'a', 'car', 'by', 'ella']) = [0, 0, 0, 1.0, 0, 0, 0, 0] (floats)
-# Example: np_was_v_dat_pp_np_by_np([1, 7, 3, 18, 1, 7, 4, 8]) = [0, 0, 0, 1.0, 0, 0, 0, 0] (floats)
+# Example: np_was_v_dat_pp_np_by_np([1, 7, 3, 19, 1, 7, 4, 8]) = [0, 0, 0, 1.0, 0, 0, 0, 0] (floats)
 
 # np was v_dat_pp_p3 np
-# e.g. [1,7,3,18,1,7]
+# e.g. [1,7,3,19,1,7]
 set example ["the","customer","was","sold","a","car"]
-np_was_v_dat_pp_p3_np = aggregate(np_two_after_mask and was_after and v_dat_mask and np_before_mask, 1);
+np_was_v_dat_pp_p3_np = aggregate(np_two_after_mask and was_after and v_dat_pp_mask and np_before_mask, 1);
 # Example: np_was_v_dat_pp_p3_np(['the', 'customer', 'was', 'sold', 'a', 'car']) = [0, 0, 0, 1, 0, 0] (ints)
 # Example: np_was_v_dat_pp_p3_np([1, 7, 3, 18, 1, 7]) = [0, 0, 0, 1, 0, 0] (ints)
 
 # np was v_dat_pp_p1 to np
 # e.g. [1,7,3,19,5,1,7]
 set example ["the","car","was","sold","to","the","customer"]
-v_dat_pp_mask = select(19, pos_tokens_vmap2, ==) and select(indices, indices, ==);
 np_v_dat_pp_to_np = aggregate(v_dat_pp_mask and np_two_after_mask and was_after and to_before_mask and np_two_before_mask, 1);
 # Example: np_v_dat_pp_to_np(['the', 'car', 'was', 'sold', 'to', 'the', 'customer']) = [0, 0, 0, 1, 0, 0, 0] (ints)
 
@@ -640,12 +640,12 @@ set example ["ella","sold","a","customer","a","car"]
 np_v_dat_p_np_np;
 
 # np was v_dat_pp_p3 np
-# e.g. [1,7,3,18,1,7]
+# e.g. [1,7,3,19,1,7]
 set example ["the","customer","was","sold","a","car"]
 np_was_v_dat_pp_p3_np;
 
 # np was v_dat_pp_p4 np by np
-# e.g. [1,7,3,18,1,7,4,8]
+# e.g. [1,7,3,19,1,7,4,8]
 set example ["the","customer","was","sold","a","car","by","ella"]
 np_was_v_dat_pp_np_by_np;
 
