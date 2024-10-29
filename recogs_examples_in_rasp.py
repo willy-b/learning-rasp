@@ -3,6 +3,12 @@ import pty
 import subprocess
 import pandas as pd
 import numpy as np
+import argparse
+
+argparser = argparse.ArgumentParser()
+# this only produces a score on the training set of ReCOGS
+argparser.add_argument("--num_train_examples_to_check", type=int, default=5)
+args = argparser.parse_args()
 
 base_path = os.path.abspath(".")
 # Load dependency if not available.
@@ -18,16 +24,9 @@ if not os.path.exists(base_path + "/RASP"):
 with open(base_path + "/RASP/rasp2.sh", "w") as f:
   f.write("""#!/bin/bash
 source raspenv/bin/activate
-
-if [[ $(rlwrap -v) == rlwrap* ]]; then
-	# the better option. requires rlwrap
-	rlwrap python3 -m RASP_support
-else
-	python3 -m RASP_support
-fi
-
+python3 -m RASP_support
 deactivate
-  """)
+""")
 os.chmod(base_path + "/RASP/rasp2.sh", 750)
 
 os.chdir(base_path + "/RASP")
@@ -102,8 +101,8 @@ if not os.path.exists("train_in_distribution_no_sprinkles_or_cp.tsv"):
     subprocess.run("cat train.tsv | grep 'in_distribution' | grep -v 'sprinkle' | grep -v 'that' >> train_in_distribution_no_sprinkles_or_cp.tsv", shell=True)
 
 recogs_train_examples = pd.read_csv("train_in_distribution_no_sprinkles_or_cp.tsv", delimiter="	")
-sentences = recogs_train_examples["COGS Sentence"][:5]
-lfs_true = recogs_train_examples["ReCOGS Logical Form"][:5]
+sentences = recogs_train_examples["COGS Sentence"][:args.num_train_examples_to_check]
+lfs_true = recogs_train_examples["ReCOGS Logical Form"][:args.num_train_examples_to_check]
 sentences = [sentence.replace(" .", "").replace(".", "") for sentence in sentences]
 lfs_computed = [process_example(sentence, False) for sentence in sentences]
 
@@ -115,6 +114,24 @@ mean_em_score = np.array(exact_matches).mean()
 num_right = np.array(exact_matches).sum()
 
 print(f"Score on first {len(sentences)} of ReCOGS train:\n(omitting CP and sprinkles or preposing as not supported in the grammar of this Restricted Access Sequence Processing Transformer equivalent program yet)\n{mean_em_score*100}% or {num_right} out of {len(sentences)}")
+print("\n\n\n")
+
+print(f"Fetching script for ReCOGS Semantic Exact Match scoring which is more flexible than exact string match (ignores irrelevant formatting differences and ordering) from Wu et al 2023's repo...")
+if not os.path.exists(base_path + "/compgen.py"):
+  os.chdir(base_path)
+  subprocess.run("wget https://raw.githubusercontent.com/frankaging/ReCOGS/1b6eca8ff4dca5fd2fb284a7d470998af5083beb/utils/compgen.py", shell=True, executable='/bin/bash')
+from compgen import recogs_exact_match
+# for semantic exact match we must NOT lowercase the "AND" as it searches for the pattern in a case-sensitive way
+semantic_exact_matches = np.array([1.0 if recogs_exact_match(lfs_computed[idx].strip().lower().replace(" and ", " AND "),lfs_true[idx].strip().lower().replace(" and ", " AND ")) else 0.0 for idx in range(len(lfs_computed))])
+mean_semantic_exact_match_score = semantic_exact_matches.mean()
+num_right_semantic_exact_match = semantic_exact_matches.sum()
+print("\n\n\n")
+print(f"Semantic match score on first {len(sentences)} of ReCOGS train:\n(omitting CP and sprinkles or preposing as not supported in the grammar of this Restricted Access Sequence Processing Transformer equivalent program yet)\n{mean_semantic_exact_match_score*100}% or {num_right_semantic_exact_match} out of {len(sentences)}")
+semantic_mismatches = []
+for idx in range(len(semantic_exact_matches)):
+  if semantic_exact_matches[idx] == 0:
+    semantic_mismatches.append((lfs_computed[idx], lfs_true[idx]))
+print(f"Mismatches: {semantic_mismatches}")
 
 # quit RASP
 input_lines = [bytes("quit()\n", 'utf8')]
