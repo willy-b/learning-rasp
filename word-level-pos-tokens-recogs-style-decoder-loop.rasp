@@ -481,10 +481,12 @@ np_v_dat_p_np_pp_iobj = aggregate(np_after_mask and v_dat_mask and any_np_pp_iob
 # e.g. [8,18,1,7,1,7]
 set example ["ella","sold","a","customer","a","car"]
 np_np_sequence = aggregate((np_prop_mask and np_before_mask) or (np_det_left_mask and np_two_before_mask), 1);
-np_np_before_mask = select(np_np_sequence, 1, ==) and select(indices-1, indices, ==);
-np_np_before_sequence = aggregate(np_np_before_mask, 1);
-np_np_before_mask = select(np_np_before_sequence, 1, ==) and select(indices, indices, ==);
-np_v_dat_p_np_np = aggregate(np_after_mask and v_dat_mask and np_np_before_mask, 1);
+# would not support prepositional phrase modification on middle NP
+#np_np_before_mask = select(np_np_sequence, 1, ==) and select(indices-1, indices, ==);
+np_np_any_before_mask = select(np_np_sequence, 1, ==) and select(indices, indices, >);
+np_np_any_before_sequence = aggregate(np_np_any_before_mask, 1);
+np_np_any_before_mask = select(np_np_any_before_sequence, 1, ==) and select(indices, indices, ==);
+np_v_dat_p_np_np = aggregate(np_after_mask and v_dat_mask and np_before_mask and np_np_any_before_mask, 1);
 # Example: np_v_dat_p_np_np(['ella', 'sold', 'a', 'customer', 'a', 'car']) = [0, 1, 0, 0, 0, 0] (ints)
 # Example: np_v_dat_p_np_np([8, 18, 1, 7, 1, 7]) = [0, 1, 0, 0, 0, 0] (ints)
 
@@ -500,10 +502,10 @@ by_np_two_before_mask = select(by_np_before_sequence, 1, ==) and select(indices-
 by_np_two_before_sequence = aggregate(by_np_two_before_mask, 1);
 by_np_two_before_mask = select(by_np_two_before_sequence, 1, ==) and select(indices, indices, ==);
 np_by_np_sequence = aggregate((np_prop_mask and by_np_before_mask) or (np_det_left_mask and by_np_two_before_mask), 1.0);
-np_by_np_before_mask = select(np_by_np_sequence, 1, ==) and select(indices-1, indices, ==);
-np_by_np_before_sequence = aggregate(np_by_np_before_mask, 1);
-np_by_np_before_mask = select(np_by_np_before_sequence, 1, ==) and select(indices, indices, ==);
-np_was_v_dat_pp_np_by_np = aggregate(np_two_after_mask and was_after and v_dat_pp_mask and np_by_np_before_mask, 1.0);
+np_by_np_any_before_mask = select(np_by_np_sequence, 1, ==) and select(indices, indices, >);
+np_by_np_any_before_sequence = aggregate(np_by_np_any_before_mask, 1);
+np_by_np_any_before_mask = select(np_by_np_any_before_sequence, 1, ==) and select(indices, indices, ==);
+np_was_v_dat_pp_np_by_np = aggregate(np_two_after_mask and was_after and v_dat_pp_mask and np_by_np_any_before_mask, 1.0);
 # Example: np_was_v_dat_pp_np_by_np(['the', 'customer', 'was', 'sold', 'a', 'car', 'by', 'ella']) = [0, 0, 0, 1.0, 0, 0, 0, 0] (floats)
 # Example: np_was_v_dat_pp_np_by_np([1, 7, 3, 19, 1, 7, 4, 8]) = [0, 0, 0, 1.0, 0, 0, 0, 0] (floats)
 
@@ -524,7 +526,7 @@ np_v_dat_pp_to_np = aggregate(v_dat_pp_mask and np_two_after_mask and was_after 
 # (was v_dat_pp_p2 pp_iobj by np)
 # e.g. [1,7,3,19,5,1,7,4,8]
 set example ["the","car","was","sold","to","the","customer","by","ella"]
-to_np_by_np_sequence = aggregate(np_by_np_before_mask and to_mask, 1);
+to_np_by_np_sequence = aggregate(np_by_np_any_before_mask and to_mask, 1);
 to_np_by_np_before_mask = select(to_np_by_np_sequence, 1, ==) and select(indices-1, indices, ==);
 to_np_by_np_before_sequence = aggregate(to_np_by_np_before_mask, 1);
 to_np_by_np_before_mask = select(to_np_by_np_before_sequence, 1, ==) and select(indices, indices, ==);
@@ -892,14 +894,15 @@ template_name = "v_dat_p2" if (any_v_dat_p2 == 1) else template_name;
 any_v_dat_pp_p1 = aggregate(select(np_v_dat_pp_to_np, 1, ==), 1);
 template_name = "v_dat_pp_p1" if (any_v_dat_pp_p1 == 1) else template_name;
 
-any_v_dat_pp_p2 = aggregate(select(np_was_v_dat_pp_to_np_by_np, 1, ==), 1);
-template_name = "v_dat_pp_p2" if (any_v_dat_pp_p2 == 1) else template_name;
-
 any_v_dat_pp_p3 = aggregate(select(np_was_v_dat_pp_p3_np, 1, ==), 1);
 template_name = "v_dat_pp_p3" if (any_v_dat_pp_p3 == 1) else template_name;
 
 any_v_dat_pp_p4 = aggregate(select(np_was_v_dat_pp_np_by_np, 1, ==), 1);
 template_name = "v_dat_pp_p4" if (any_v_dat_pp_p4 == 1) else template_name;
+
+# must be checked after P4
+any_v_dat_pp_p2 = aggregate(select(np_was_v_dat_pp_to_np_by_np, 1, ==), 1);
+template_name = "v_dat_pp_p2" if (any_v_dat_pp_p2 == 1) else template_name;
 
 template_mapping_output = get_template_mapping(template_name, after_intro_idx);
 
