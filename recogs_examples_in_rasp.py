@@ -10,11 +10,12 @@ argparser = argparse.ArgumentParser()
 argparser.add_argument("--num_train_examples_to_check", type=int, default=5)
 argparser.add_argument("--use_dev_split", action="store_true")
 argparser.add_argument("--use_gen_split", action="store_true")
+argparser.add_argument("--use_test_split", action="store_true")
 argparser.add_argument("--do_pp_recursion_gen_split", action="store_true") # needs to be done separately as very slow
 args = argparser.parse_args()
-if args.use_gen_split and args.use_dev_split:
-  print("Please select just one of the arguments `--use_gen_split` and `--use_dev_split`")
-  raise Exception("Please select just one of the arguments `--use_gen_split` and `--use_dev_split`")
+if (args.use_gen_split and args.use_dev_split) or (args.use_gen_split and args.use_test_split) or (args.use_dev_split and args.use_test_split):
+  print("Please select just one of the arguments `--use_gen_split`,`--use_dev_split`, or `--use_test_split`")
+  raise Exception("Please select just one of the arguments `--use_gen_split`,`--use_dev_split`,`--use_test_split`")
 
 if args.do_pp_recursion_gen_split and not args.use_gen_split:
   print("`do_pp_recursion_gen_split` can only be used when `--use_gen_split` is used!")
@@ -105,7 +106,7 @@ process_example("a boy painted the girl", False)
 process_example("the girl was painted by a boy", False)
 recogs_datafile = None
 
-score_on_train_sample = not args.use_dev_split and not args.use_gen_split
+score_on_train_sample = not args.use_dev_split and not args.use_gen_split and not args.use_test_split
 
 print(f"Fetching script for ReCOGS Semantic Exact Match scoring which is more flexible than exact string match (ignores irrelevant formatting differences and ordering) from Wu et al 2023's repo...")
 if not os.path.exists(base_path + "/compgen.py"):
@@ -120,29 +121,38 @@ def get_semantic_exact_match_score(lfs_predicted, lfs_actual):
   return mean_semantic_exact_match_score, num_right_semantic_exact_match, semantic_exact_matches
 
 if score_on_train_sample:
-  print("Now load official Wu et al 2023 ReCOGS training examples\n(sample from https://raw.githubusercontent.com/frankaging/ReCOGS/refs/heads/main/recogs_positional_index/train.tsv , associated with https://arxiv.org/abs/2303.13716 )")
+  print("Now load official Wu et al 2023 ReCOGS training examples\n(sample from https://raw.githubusercontent.com/frankaging/ReCOGS/1b6eca8ff4dca5fd2fb284a7d470998af5083beb/recogs_positional_index/train.tsv , associated with https://arxiv.org/abs/2303.13716 )")
   if not os.path.exists("train_in_distribution_no_sprinkles_or_cp.tsv"):
     # one of official author's dataset for ReCOGS paper
-    subprocess.run("wget https://raw.githubusercontent.com/frankaging/ReCOGS/refs/heads/main/recogs_positional_index/train.tsv", shell=True)
+    subprocess.run("wget https://raw.githubusercontent.com/frankaging/ReCOGS/1b6eca8ff4dca5fd2fb284a7d470998af5083beb/recogs_positional_index/train.tsv", shell=True)
     subprocess.run("echo 'COGS Sentence	ReCOGS Logical Form	Distribution' > train_in_distribution_no_sprinkles_or_cp.tsv", shell=True)
     subprocess.run("cat train.tsv | grep 'in_distribution' | grep -v 'sprinkle' | grep -v 'that' >> train_in_distribution_no_sprinkles_or_cp.tsv", shell=True)
   recogs_datafile = pd.read_csv("train_in_distribution_no_sprinkles_or_cp.tsv", delimiter="	")
 else:
   if args.use_dev_split:
     print("Using dev split, the `num_train_examples_to_check` argument will be ignored")
-    print("Now load official Wu et al 2023 ReCOGS dev split (excluding complement phrases as not yet supported)\n(https://raw.githubusercontent.com/frankaging/ReCOGS/refs/heads/main/recogs_positional_index/dev.tsv , associated with https://arxiv.org/abs/2303.13716 )")
+    print("Now load official Wu et al 2023 ReCOGS dev split (excluding complement phrases as not yet supported)\n(https://raw.githubusercontent.com/frankaging/ReCOGS/1b6eca8ff4dca5fd2fb284a7d470998af5083beb/recogs_positional_index/dev.tsv , associated with https://arxiv.org/abs/2303.13716 )")
     if not os.path.exists("dev_no_cp.tsv"):
       # one of official author's dataset for ReCOGS paper
-      subprocess.run("wget https://raw.githubusercontent.com/frankaging/ReCOGS/refs/heads/main/recogs_positional_index/dev.tsv", shell=True)
+      subprocess.run("wget https://raw.githubusercontent.com/frankaging/ReCOGS/1b6eca8ff4dca5fd2fb284a7d470998af5083beb/recogs_positional_index/dev.tsv", shell=True)
       subprocess.run("echo 'COGS Sentence	ReCOGS Logical Form	Distribution' > dev_no_cp.tsv", shell=True)
       subprocess.run("cat dev.tsv | grep -v 'that' >> dev_no_cp.tsv", shell=True)
     recogs_datafile = pd.read_csv("dev_no_cp.tsv", delimiter="	")
+  elif args.use_test_split:
+    print("Using test split, the `num_train_examples_to_check` argument will be ignored")
+    print("Now load official Wu et al 2023 ReCOGS test split (excluding complement phrases as not yet supported)\n(https://raw.githubusercontent.com/frankaging/ReCOGS/1b6eca8ff4dca5fd2fb284a7d470998af5083beb/recogs_positional_index/test.tsv , associated with https://arxiv.org/abs/2303.13716 )")
+    if not os.path.exists("test_no_cp.tsv"):
+      # one of official author's dataset for ReCOGS paper
+      subprocess.run("wget https://raw.githubusercontent.com/frankaging/ReCOGS/1b6eca8ff4dca5fd2fb284a7d470998af5083beb/recogs_positional_index/test.tsv", shell=True)
+      subprocess.run("echo 'COGS Sentence	ReCOGS Logical Form	Distribution' > test_no_cp.tsv", shell=True)
+      subprocess.run("cat test.tsv | grep -v 'that' >> test_no_cp.tsv", shell=True)
+    recogs_datafile = pd.read_csv("test_no_cp.tsv", delimiter="	")
   elif args.use_gen_split:
     print("Using gen split, the `num_train_examples_to_check` argument will be ignored")
-    print("Now load official Wu et al 2023 ReCOGS gen split (excluding complement phrases as not yet supported)\n(https://raw.githubusercontent.com/frankaging/ReCOGS/refs/heads/main/recogs_positional_index/gen.tsv , associated with https://arxiv.org/abs/2303.13716 )")
+    print("Now load official Wu et al 2023 ReCOGS gen split (excluding complement phrases as not yet supported)\n(https://raw.githubusercontent.com/frankaging/ReCOGS/1b6eca8ff4dca5fd2fb284a7d470998af5083beb/recogs_positional_index/gen.tsv , associated with https://arxiv.org/abs/2303.13716 )")
     filename = "gen_no_cp_only_pp_recursion.tsv" if args.do_pp_recursion_gen_split else "gen_no_cp_no_pp_recursion.tsv"
     # one of official author's dataset for ReCOGS paper
-    subprocess.run("wget https://raw.githubusercontent.com/frankaging/ReCOGS/refs/heads/main/recogs_positional_index/gen.tsv", shell=True)
+    subprocess.run("wget https://raw.githubusercontent.com/frankaging/ReCOGS/1b6eca8ff4dca5fd2fb284a7d470998af5083beb/recogs_positional_index/gen.tsv", shell=True)
     subprocess.run(f"echo 'COGS Sentence	ReCOGS Logical Form	Distribution' > {filename}", shell=True)
     if not args.do_pp_recursion_gen_split:
       print("Note pp recursion split (which is slow) is left out by default, run `--do_pp_recursion_gen_split` to score that (it is supported)")
@@ -162,7 +172,7 @@ else:
   lfs_true = recogs_datafile["ReCOGS Logical Form"]
   labels = recogs_datafile["Distribution"]
 
-label = "dev" if args.use_dev_split else ("gen" if args.use_gen_split else "data")
+label = "test" if args.use_test_split else ("dev" if args.use_dev_split else ("gen" if args.use_gen_split else "data"))
 sentences = [sentence.replace(" .", "").replace(".", "") for sentence in sentences]
 lfs_computed = []
 for idx in range(len(sentences)):
@@ -178,7 +188,7 @@ for idx in range(len(sentences)):
     output_df.to_csv("lf_output.tsv", index=False, sep="	")
     if len(lfs_computed)>=10:
       mean_semantic_exact_match_score, num_right_semantic_exact_match, semantic_match_scores = get_semantic_exact_match_score(lfs_computed, lfs_true[:len(lfs_computed)])
-      print(f"Semantic match score on first {len(lfs_computed)} of ReCOGS_pos {label}:\n(omitting CP and sprinkles or preposing as not supported in the grammar of this Restricted Access Sequence Processing Transformer equivalent program yet)\n{mean_semantic_exact_match_score*100}% or {num_right_semantic_exact_match} out of {len(lfs_computed)}")
+      print(f"Semantic exact match score on first {len(lfs_computed)} of ReCOGS_pos {label}:\n(omitting CP and sprinkles or preposing as not supported in the grammar of this Restricted Access Sequence Processing Transformer equivalent program yet)\n{mean_semantic_exact_match_score*100}% or {num_right_semantic_exact_match} out of {len(lfs_computed)}")
       if args.use_gen_split:
         gen_sem_df = pd.DataFrame([{"Semantic Exact Match": semantic_match_scores[jdx], "Category": labels[jdx]} for jdx in range(idx+1)], columns=["Semantic Exact Match", "Category"])
         mean_sem_by_category = gen_sem_df.groupby("Category").mean()
@@ -189,22 +199,21 @@ output_df = pd.DataFrame([{"Input Sentence": sentences[jdx], "Logical Form Predi
 output_df.to_csv("lf_output.tsv", index=False, sep="	")
 
 # note not finished with the grammar yet and it will, when scored by Exact Match, systematically miss the v_inf_taking_to_v_inf (e.g. "the scientist wanted to read") due to misordered output vs reference
-# in ReCOGS "semantic exact match" they would still be correct as it ignores semantically meaningless reorderings but I am scoring with exact match here for the time being
-
+# in ReCOGS "semantic exact match" they are still be correct as it ignores semantically meaningless reorderings but we can compute this also
 exact_matches = [1.0 if lfs_computed[idx].strip().lower() == lfs_true[idx].strip().lower() else 0.0 for idx in range(len(lfs_computed))]
 mean_em_score = np.array(exact_matches).mean()
-num_right = np.array(exact_matches).sum()
+num_em_right = np.array(exact_matches).sum()
 
 if score_on_train_sample:
-  print(f"Exact Match score on first {len(sentences)} of ReCOGS train:\n(omitting CP and sprinkles or preposing as not supported in the grammar of this Restricted Access Sequence Processing Transformer equivalent program yet)\n{mean_em_score*100}% or {num_right} out of {len(sentences)}")
+  print(f"Exact Match score on first {len(sentences)} of ReCOGS train:\n(omitting CP and sprinkles or preposing as not supported in the grammar of this Restricted Access Sequence Processing Transformer equivalent program yet)\n{mean_em_score*100}% or {num_em_right} out of {len(sentences)}")
 print("\n\n\n")
 
 mean_semantic_exact_match_score, num_right_semantic_exact_match, semantic_exact_matches = get_semantic_exact_match_score(lfs_computed, lfs_true)
 print("\n\n\n")
 if score_on_train_sample:
-  print(f"Semantic match score on first {len(sentences)} of ReCOGS_pos train:\n(omitting CP and sprinkles or preposing as not supported in the grammar of this Restricted Access Sequence Processing Transformer equivalent program yet)\n{mean_semantic_exact_match_score*100}% or {num_right_semantic_exact_match} out of {len(sentences)}")
+  print(f"Semantic exact match score on first {len(sentences)} of ReCOGS_pos train:\n(omitting CP and sprinkles or preposing as not supported in the grammar of this Restricted Access Sequence Processing Transformer equivalent program yet)\n{mean_semantic_exact_match_score*100}% or {num_right_semantic_exact_match} out of {len(sentences)}")
 else:
-  print(f"Semantic match score on the {len(sentences)} of ReCOGS_pos {label}:\n(omitting CP as not supported in the grammar of this Restricted Access Sequence Processing Transformer equivalent program yet)\n{mean_semantic_exact_match_score*100}% or {num_right_semantic_exact_match} out of {len(sentences)}")
+  print(f"Semantic exact match score on the {len(sentences)} of ReCOGS_pos {label}:\n(omitting CP as not supported in the grammar of this Restricted Access Sequence Processing Transformer equivalent program yet)\n{mean_semantic_exact_match_score*100}% or {num_right_semantic_exact_match} out of {len(sentences)}")
   if args.use_gen_split:
     gen_sem_df = pd.DataFrame([{"Semantic Exact Match": semantic_match_scores[jdx], "Category": labels[jdx]} for jdx in range(len(lfs_computed))], columns=["Semantic Exact Match", "Category"])
     mean_sem_by_category = gen_sem_df.groupby("Category").mean()
