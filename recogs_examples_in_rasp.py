@@ -11,6 +11,8 @@ argparser.add_argument("--num_train_examples_to_check", type=int, default=5)
 argparser.add_argument("--use_dev_split", action="store_true")
 argparser.add_argument("--use_gen_split", action="store_true")
 argparser.add_argument("--use_test_split", action="store_true")
+# if Google Colab or other environment crashes, you may want to pick up where it left off
+argparser.add_argument("--skip_rows", type=int, default=0)
 argparser.add_argument("--do_pp_recursion_gen_split", action="store_true") # needs to be done separately as very slow
 args = argparser.parse_args()
 if (args.use_gen_split and args.use_dev_split) or (args.use_gen_split and args.use_test_split) or (args.use_dev_split and args.use_test_split):
@@ -163,6 +165,12 @@ else:
       subprocess.run(f"cat gen.tsv | grep -v 'that' | grep 'pp_recursion' >> {filename}", shell=True)
       recogs_datafile = pd.read_csv(f"{filename}", delimiter="	")
 
+pos_desc = "first"
+if args.skip_rows > 0:
+  pos_desc = f"first (after {args.skip_rows})"
+  print(f"Skipped {args.skip_rows} per argument")
+  recogs_datafile = pd.DataFrame(recogs_datafile.values[args.skip_rows:], columns=recogs_datafile.columns)
+
 if score_on_train_sample:
   sentences = recogs_datafile["COGS Sentence"][:args.num_train_examples_to_check]
   lfs_true = recogs_datafile["ReCOGS Logical Form"][:args.num_train_examples_to_check]
@@ -188,7 +196,7 @@ for idx in range(len(sentences)):
     output_df.to_csv("lf_output.tsv", index=False, sep="	")
     if len(lfs_computed)>=10:
       mean_semantic_exact_match_score, num_right_semantic_exact_match, semantic_match_scores = get_semantic_exact_match_score(lfs_computed, lfs_true[:len(lfs_computed)])
-      print(f"Semantic exact match score on first {len(lfs_computed)} of ReCOGS_pos {label}:\n(omitting CP and sprinkles or preposing as not supported in the grammar of this Restricted Access Sequence Processing Transformer equivalent program yet)\n{mean_semantic_exact_match_score*100}% or {num_right_semantic_exact_match} out of {len(lfs_computed)}")
+      print(f"Semantic exact match score on {pos_desc} {len(lfs_computed)} of ReCOGS_pos {label}:\n(omitting CP and sprinkles or preposing as not supported in the grammar of this Restricted Access Sequence Processing Transformer equivalent program yet)\n{mean_semantic_exact_match_score*100}% or {num_right_semantic_exact_match} out of {len(lfs_computed)}")
       if args.use_gen_split:
         gen_sem_df = pd.DataFrame([{"Semantic Exact Match": semantic_match_scores[jdx], "Category": labels[jdx]} for jdx in range(idx+1)], columns=["Semantic Exact Match", "Category"])
         mean_sem_by_category = gen_sem_df.groupby("Category").mean()
@@ -205,20 +213,21 @@ mean_em_score = np.array(exact_matches).mean()
 num_em_right = np.array(exact_matches).sum()
 
 if score_on_train_sample:
-  print(f"Exact Match score on first {len(sentences)} of ReCOGS train:\n(omitting CP and sprinkles or preposing as not supported in the grammar of this Restricted Access Sequence Processing Transformer equivalent program yet)\n{mean_em_score*100}% or {num_em_right} out of {len(sentences)}")
+  print(f"Exact Match score on {pos_desc} {len(sentences)} of ReCOGS train:\n(omitting CP and sprinkles or preposing as not supported in the grammar of this Restricted Access Sequence Processing Transformer equivalent program yet)\n{mean_em_score*100}% or {num_em_right} out of {len(sentences)}")
 print("\n\n\n")
 
 mean_semantic_exact_match_score, num_right_semantic_exact_match, semantic_exact_matches = get_semantic_exact_match_score(lfs_computed, lfs_true)
 print("\n\n\n")
 if score_on_train_sample:
-  print(f"Semantic exact match score on first {len(sentences)} of ReCOGS_pos train:\n(omitting CP and sprinkles or preposing as not supported in the grammar of this Restricted Access Sequence Processing Transformer equivalent program yet)\n{mean_semantic_exact_match_score*100}% or {num_right_semantic_exact_match} out of {len(sentences)}")
+  print(f"Semantic exact match score on {pos_desc} {len(sentences)} of ReCOGS_pos train:\n(omitting CP and sprinkles or preposing as not supported in the grammar of this Restricted Access Sequence Processing Transformer equivalent program yet)\n{mean_semantic_exact_match_score*100}% or {num_right_semantic_exact_match} out of {len(sentences)}")
 else:
   print(f"Semantic exact match score on the {len(sentences)} of ReCOGS_pos {label}:\n(omitting CP as not supported in the grammar of this Restricted Access Sequence Processing Transformer equivalent program yet)\n{mean_semantic_exact_match_score*100}% or {num_right_semantic_exact_match} out of {len(sentences)}")
   if args.use_gen_split:
     gen_sem_df = pd.DataFrame([{"Semantic Exact Match": semantic_match_scores[jdx], "Category": labels[jdx]} for jdx in range(len(lfs_computed))], columns=["Semantic Exact Match", "Category"])
     mean_sem_by_category = gen_sem_df.groupby("Category").mean()
     counts_by_category = gen_sem_df.groupby("Category").count()
-    print(f"Semantic Exact Match % by category: {mean_sem_by_category*100}\nCounts by category: {counts_by_category}\n\n")
+    counts_right_by_category = gen_sem_df.groupby("Category").sum()
+    print(f"Semantic Exact Match % by category: {mean_sem_by_category*100}\nCounts by category: {counts_by_category}\n# Correct by category: {counts_right_by_category}\n\n")
 
 semantic_mismatches = []
 for idx in range(len(semantic_exact_matches)):
