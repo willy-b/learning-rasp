@@ -115,12 +115,49 @@ if not os.path.exists(base_path + "/compgen.py"):
   os.chdir(base_path)
   subprocess.run("wget https://raw.githubusercontent.com/frankaging/ReCOGS/1b6eca8ff4dca5fd2fb284a7d470998af5083beb/utils/compgen.py", shell=True, executable='/bin/bash')
 from compgen import recogs_exact_match
+def semantic_exact_match(lf_predicted, lf_actual):
+  return 1.0 if recogs_exact_match(lf_predicted.strip().lower().replace(" and ", " AND "),lf_actual.strip().lower().replace(" and ", " AND ")) else 0.0
+
+def get_clopper_pearson_confidence_interval(n, k):
+  alpha = 0.05
+  from scipy.stats import beta
+  cp_confidence_interval = beta.ppf([alpha/2.0, 1-alpha/2.0], [k, k+1],[n-k + 1, n-k])
+  if n == k:
+    cp_confidence_interval[1] = 1.0
+  if k == 0:
+    cp_confidence_interval[0] = 0.0
+  return cp_confidence_interval
+
 def get_semantic_exact_match_score(lfs_predicted, lfs_actual):
   # for semantic exact match we must NOT lowercase the "AND" as it searches for the pattern in a case-sensitive way
-  semantic_exact_matches = np.array([1.0 if recogs_exact_match(lfs_predicted[idx].strip().lower().replace(" and ", " AND "),lfs_actual[idx].strip().lower().replace(" and ", " AND ")) else 0.0 for idx in range(len(lfs_predicted))])
+  semantic_exact_matches = np.array([semantic_exact_match(lfs_predicted[idx], lfs_actual[idx]) for idx in range(len(lfs_predicted))])
   mean_semantic_exact_match_score = semantic_exact_matches.mean()
   num_right_semantic_exact_match = semantic_exact_matches.sum()
-  return mean_semantic_exact_match_score, num_right_semantic_exact_match, semantic_exact_matches
+  count = len(lfs_predicted)
+  semantic_exact_match_score_confidence_interval = get_clopper_pearson_confidence_interval(count, num_right_semantic_exact_match)
+  return mean_semantic_exact_match_score, num_right_semantic_exact_match, semantic_exact_matches, semantic_exact_match_score_confidence_interval
+
+def get_percentages_with_ci_groupby_binary_data(df, groupby_key, alpha=0.05):
+  dfgb = df.groupby(groupby_key)
+  c = dfgb.count()
+  s = dfgb.sum()
+  c.columns = ["count"]
+  ci_lows = {}
+  ci_highs = {}
+  p = {}
+  for idx in c.index:
+    n = c.loc[idx].values[0]
+    k = s.loc[idx].values[0]
+    from scipy.stats import beta
+    ci = get_clopper_pearson_confidence_interval(n, k)
+    ci_lows[idx] = ci[0]*100.0
+    ci_highs[idx] = ci[1]*100.0
+    p[idx] = float(k)/float(n)*100
+  c.insert(0, "hits", s)
+  c.insert(0, "percentage", p)
+  c.insert(0, "percentage_ci_high", ci_highs)
+  c.insert(0, "percentage_ci_low", ci_lows)
+  return c
 
 if score_on_train_sample:
   print("Now load official Wu et al 2023 ReCOGS training examples\n(sample from https://raw.githubusercontent.com/frankaging/ReCOGS/1b6eca8ff4dca5fd2fb284a7d470998af5083beb/recogs_positional_index/train.tsv , associated with https://arxiv.org/abs/2303.13716 )")
@@ -183,6 +220,7 @@ else:
 label = "test" if args.use_test_split else ("dev" if args.use_dev_split else ("gen" if args.use_gen_split else "data"))
 sentences = [sentence.replace(" .", "").replace(".", "") for sentence in sentences]
 lfs_computed = []
+semantic_exact_matches = []
 for idx in range(len(sentences)):
   try:
     output = process_example(sentences[idx], False)
@@ -190,18 +228,20 @@ for idx in range(len(sentences)):
     print(f"Could not process input '{sentences[idx]}'")
     output = ""
   lfs_computed.append(output)
+  semantic_exact_matches.append(semantic_exact_match(output, lfs_true[idx]))
+  n = len(semantic_exact_matches)
+  k_sem_matches = np.array(semantic_exact_matches).sum()
+  sem_pct = k_sem_matches/n*100.0
+  sem_ci_pct = get_clopper_pearson_confidence_interval(n, k_sem_matches)*100.0
+  print(f"Semantic exact match score on {pos_desc} {n} of ReCOGS_pos {label}:\n(omitting CP and sprinkles or preposing as not supported in the grammar of this Restricted Access Sequence Processing Transformer equivalent program yet)\n{sem_pct:0.2f}% or {k_sem_matches} out of {n} (95% confidence interval: {sem_ci_pct[0]:0.2f}% to {sem_ci_pct[1]:0.2f}%)")
+  if args.use_gen_split:
+        gen_sem_df = pd.DataFrame([{"Semantic Exact Match": semantic_exact_matches[jdx], "Category": labels[jdx]} for jdx in range(idx+1)], columns=["Semantic Exact Match", "Category"])
+        sem_by_category_with_ci = get_percentages_with_ci_groupby_binary_data(gen_sem_df, "Category")
+        print(f"Semantic Exact Match % by category: {sem_by_category_with_ci}")
   if idx % 10 == 0:
     # update CSV (these are small so can rewrite each time)
     output_df = pd.DataFrame([{"Input Sentence": sentences[jdx], "Logical Form Predicted": lfs_computed[jdx], "Label": labels[jdx]} for jdx in range(idx+1)], columns=["Input Sentence", "Logical Form Predicted","Label"])
     output_df.to_csv("lf_output.tsv", index=False, sep="	")
-    if len(lfs_computed)>=10:
-      mean_semantic_exact_match_score, num_right_semantic_exact_match, semantic_match_scores = get_semantic_exact_match_score(lfs_computed, lfs_true[:len(lfs_computed)])
-      print(f"Semantic exact match score on {pos_desc} {len(lfs_computed)} of ReCOGS_pos {label}:\n(omitting CP and sprinkles or preposing as not supported in the grammar of this Restricted Access Sequence Processing Transformer equivalent program yet)\n{mean_semantic_exact_match_score*100}% or {num_right_semantic_exact_match} out of {len(lfs_computed)}")
-      if args.use_gen_split:
-        gen_sem_df = pd.DataFrame([{"Semantic Exact Match": semantic_match_scores[jdx], "Category": labels[jdx]} for jdx in range(idx+1)], columns=["Semantic Exact Match", "Category"])
-        mean_sem_by_category = gen_sem_df.groupby("Category").mean()
-        counts_by_category = gen_sem_df.groupby("Category").count()
-        print(f"Semantic Exact Match % by category: {mean_sem_by_category*100}\nCounts by category: {counts_by_category}\n\n")
 
 output_df = pd.DataFrame([{"Input Sentence": sentences[jdx], "Logical Form Predicted": lfs_computed[jdx]} for jdx in range(len(lfs_computed))], columns=["Input Sentence", "Logical Form Predicted"])
 output_df.to_csv("lf_output.tsv", index=False, sep="	")
@@ -216,18 +256,16 @@ if score_on_train_sample:
   print(f"Exact Match score on {pos_desc} {len(sentences)} of ReCOGS train:\n(omitting CP and sprinkles or preposing as not supported in the grammar of this Restricted Access Sequence Processing Transformer equivalent program yet)\n{mean_em_score*100}% or {num_em_right} out of {len(sentences)}")
 print("\n\n\n")
 
-mean_semantic_exact_match_score, num_right_semantic_exact_match, semantic_exact_matches = get_semantic_exact_match_score(lfs_computed, lfs_true)
+mean_semantic_exact_match_score, num_right_semantic_exact_match, semantic_exact_matches, semantic_exact_match_score_confidence_interval = get_semantic_exact_match_score(lfs_computed, lfs_true)
 print("\n\n\n")
 if score_on_train_sample:
-  print(f"Semantic exact match score on {pos_desc} {len(sentences)} of ReCOGS_pos train:\n(omitting CP and sprinkles or preposing as not supported in the grammar of this Restricted Access Sequence Processing Transformer equivalent program yet)\n{mean_semantic_exact_match_score*100}% or {num_right_semantic_exact_match} out of {len(sentences)}")
+  print(f"Semantic exact match score on {pos_desc} {len(sentences)} of ReCOGS_pos train:\n(omitting CP and sprinkles or preposing as not supported in the grammar of this Restricted Access Sequence Processing Transformer equivalent program yet)\n{mean_semantic_exact_match_score*100:0.2f}% or {num_right_semantic_exact_match} out of {len(sentences)} (95% confidence interval: {semantic_exact_match_score_confidence_interval[0]*100:0.2f}% to {semantic_exact_match_score_confidence_interval[1]*100:0.2f}%)")
 else:
-  print(f"Semantic exact match score on the {len(sentences)} of ReCOGS_pos {label}:\n(omitting CP as not supported in the grammar of this Restricted Access Sequence Processing Transformer equivalent program yet)\n{mean_semantic_exact_match_score*100}% or {num_right_semantic_exact_match} out of {len(sentences)}")
+  print(f"Semantic exact match score on {pos_desc} {len(sentences)} of ReCOGS_pos {label}:\n(omitting CP as not supported in the grammar of this Restricted Access Sequence Processing Transformer equivalent program yet)\n{mean_semantic_exact_match_score*100:0.2f}% or {num_right_semantic_exact_match} out of {len(sentences)} (95% confidence interval: {semantic_exact_match_score_confidence_interval[0]*100:0.2f}% to {semantic_exact_match_score_confidence_interval[1]*100:0.2f}%)")
   if args.use_gen_split:
     gen_sem_df = pd.DataFrame([{"Semantic Exact Match": semantic_match_scores[jdx], "Category": labels[jdx]} for jdx in range(len(lfs_computed))], columns=["Semantic Exact Match", "Category"])
-    mean_sem_by_category = gen_sem_df.groupby("Category").mean()
-    counts_by_category = gen_sem_df.groupby("Category").count()
-    counts_right_by_category = gen_sem_df.groupby("Category").sum()
-    print(f"Semantic Exact Match % by category: {mean_sem_by_category*100}\nCounts by category: {counts_by_category}\n# Correct by category: {counts_right_by_category}\n\n")
+    sem_by_category_with_ci = get_percentages_with_ci_groupby_binary_data(gen_sem_df, "Category")
+    print(f"Semantic Exact Match % by category: {sem_by_category_with_ci}")
 
 semantic_mismatches = []
 for idx in range(len(semantic_exact_matches)):
