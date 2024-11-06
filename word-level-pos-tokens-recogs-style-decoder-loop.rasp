@@ -842,7 +842,7 @@ after_intro_target_token = "";
 # target_token ( idx , idx ) AND
 #      0       1  2  3  4  5  6
 template_name = "";
-# TEMPORARILY just do 1 template per input rather than handling clausal embedding, complement phrase recursion, etc; this can be updated to put the appropriate template name in each position in the sequence, basically just drop the aggregate step here
+# matching one template is sufficient, even when complement phrase recursion is implemented due to simplicity of COGS input grammar (complement phrases just add to the beginning and can be masked away)
 any_np_v_trans_omissible = aggregate(select(np_v_trans_omissible, 1, ==), 1);
 template_name = "v_trans_omissible_p1" if (any_np_v_trans_omissible == 1) else template_name;
 
