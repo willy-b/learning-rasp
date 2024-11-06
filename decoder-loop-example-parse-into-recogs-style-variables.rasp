@@ -1,5 +1,7 @@
 # THIS SINGLE TEMPLATE CHARACTER LEVEL EXAMPLE WAS JUST A STARTING POINT,
 # SEE word-level-pos-tokens-recogs-style-decoder-loop.rasp FOR SUPPORT OF MULTIPLE TEMPLATES COVERING MOST OF THE GRAMMAR.
+# This is also not enforcing causal masks, though that can be done reading out the pooled word values only at separators or the end of words.
+# Again, see word-level-pos-tokens-recogs-style-decoder-loop.rasp for a more complete solution, which is also Encoder-Decoder compatible, it only allows encoder style bidirectional aggregation in the input part of the sequence, and causal aggregation over output sequence part of input for single-next-token prediction at last position (decoder loop).
 
 # Example building on example-word-type-dictionary-lookup.rasp to demo a basic decoder loop parsing out nouns and verbs as numbered variable in a logical form (somewhat ReCOGS style)
 # using Restricted Access Sequence Processing (RASP) (Weiss et al 2021)
