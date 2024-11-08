@@ -749,8 +749,28 @@ cp_output = "(" if ((num_tokens_in_output_excluding_asterisks-cp_skip_tokens) % 
 cp_agent_left_idx = target_word_index;
 cp_output = cp_agent_left_idx if ((num_tokens_in_output_excluding_asterisks-cp_skip_tokens) % cp_block_num_tokens == 7) else cp_output;
 cp_output = "," if ((num_tokens_in_output_excluding_asterisks-cp_skip_tokens) % cp_block_num_tokens == 8) else cp_output;
-cp_idx = cp_in_output_count;
-cp_target_noun_index = aggregate(select(indices, cp_idx, ==), input_indices_sorted);
+
+# select against nv index excluding any (pp np ; do not confuse with np_pp, we want the left most child of np_pp)
+# create a sequence of np_det,np_prop indices excluding any np which is preceded by pp
+
+pp_sequence = indicator(pos_tokens == 2);
+pp_one_after_mask = select(pp_sequence, 1, ==) and select(indices+1, indices, ==);
+pp_one_after_sequence = aggregate(pp_one_after_mask, 1);
+pp_one_after_mask = select(pp_one_after_sequence, 1, ==) and select(indices, indices, ==);
+
+pp_two_after_mask = select(pp_sequence, 1, ==) and select(indices+2, indices, ==);
+pp_two_after_sequence = aggregate(pp_two_after_mask, 1);
+pp_two_after_mask = select(pp_two_after_sequence, 1, ==) and select(indices, indices, ==);
+
+np_det_diag_mask = select(aggregate(np_det_mask, 1), 1, ==) and select(indices, indices, ==);
+np_prop_diag_mask = select(aggregate(np_prop_mask, 1), 1, ==) and select(indices, indices, ==);
+
+no_pp_np_mask = 1 - aggregate((pp_one_after_mask and np_prop_diag_mask) or (pp_two_after_mask and np_det_diag_mask), 1);
+nps_without_pp_prefix_indices = selector_width(select(NOUN_MASK*no_pp_np_mask, 1, ==) and select(indices, indices, <=))*NOUN_MASK*no_pp_np_mask;
+
+
+cp_target_noun_index = aggregate(select(nps_without_pp_prefix_indices, cp_in_output_count+1, ==), indices);
+
 cp_agent_right_idx = cp_target_noun_index; # this is the ith noun where i is the cp index we are on
 cp_output = cp_agent_right_idx if ((num_tokens_in_output_excluding_asterisks-cp_skip_tokens) % cp_block_num_tokens == 9) else cp_output;
 cp_output = ")" if ((num_tokens_in_output_excluding_asterisks-cp_skip_tokens) % cp_block_num_tokens == 10) else cp_output;
@@ -970,25 +990,6 @@ after_intro_target_token = "(" if (after_intro_num_tokens_in_output_excluding_as
 left_idx_in_nps_zero_based = nv_in_output_count-1; # the one verb supported so far
 # TODO first we special case v_inf_taking_to_v_inf, but later let's make it more generic
 left_idx_in_nps_zero_based = (left_idx_in_nps_zero_based-1) if (template_name == "v_inf_taking" and after_intro_idx <= 2) else left_idx_in_nps_zero_based;
-
-# select against nv index excluding any (pp np ; do not confuse with np_pp, we want the left most child of np_pp)
-# create a sequence of np_det,np_prop indices excluding any np which is preceded by pp
-
-pp_sequence = indicator(pos_tokens == 2);
-pp_one_after_mask = select(pp_sequence, 1, ==) and select(indices+1, indices, ==);
-pp_one_after_sequence = aggregate(pp_one_after_mask, 1);
-pp_one_after_mask = select(pp_one_after_sequence, 1, ==) and select(indices, indices, ==);
-
-pp_two_after_mask = select(pp_sequence, 1, ==) and select(indices+2, indices, ==);
-pp_two_after_sequence = aggregate(pp_two_after_mask, 1);
-pp_two_after_mask = select(pp_two_after_sequence, 1, ==) and select(indices, indices, ==);
-
-np_det_diag_mask = select(aggregate(np_det_mask, 1), 1, ==) and select(indices, indices, ==);
-np_prop_diag_mask = select(aggregate(np_prop_mask, 1), 1, ==) and select(indices, indices, ==);
-
-no_pp_np_mask = 1 - aggregate((pp_one_after_mask and np_prop_diag_mask) or (pp_two_after_mask and np_det_diag_mask), 1);
-nps_without_pp_prefix_indices = selector_width(select(NOUN_MASK*no_pp_np_mask, 1, ==) and select(indices, indices, <=))*NOUN_MASK*no_pp_np_mask;
-
 left_idx = aggregate(select(indices, left_idx_in_nps_zero_based, ==), input_indices_sorted);
 right_idx = aggregate(select(nps_without_pp_prefix_indices, after_intro_idx+cp_in_output_count, ==), indices);
 
