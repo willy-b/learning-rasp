@@ -1015,6 +1015,7 @@ left_idx_in_nvs_zero_based = nv_in_input_count-1; # the one verb supported so fa
 left_idx_in_nvs_zero_based = (left_idx_in_nvs_zero_based-1) if (template_name == "v_inf_taking" and after_intro_idx <= 2) else left_idx_in_nvs_zero_based;
 
 left_idx = aggregate(select(indices, left_idx_in_nvs_zero_based, ==), input_indices_sorted);
+
 right_idx = aggregate(select(nps_without_pp_prefix_indices, after_intro_idx+cp_in_output_count, ==), indices);
 
 # points to 2nd verb for xcomp for v_inf_taking_v_inf
