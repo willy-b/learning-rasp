@@ -15,6 +15,7 @@ argparser.add_argument("--cp_examples_only", action="store_true")
 # if Google Colab or other environment crashes, you may want to pick up where it left off
 argparser.add_argument("--skip_rows", type=int, default=0)
 argparser.add_argument("--do_pp_recursion_gen_split", action="store_true") # needs to be done separately as very slow
+argparser.add_argument("--do_cp_recursion_gen_split", action="store_true") # needs to be done separately as very slow
 args = argparser.parse_args()
 if (args.use_gen_split and args.use_dev_split) or (args.use_gen_split and args.use_test_split) or (args.use_dev_split and args.use_test_split):
   print("Please select just one of the arguments `--use_gen_split`,`--use_dev_split`, or `--use_test_split`")
@@ -23,6 +24,19 @@ if (args.use_gen_split and args.use_dev_split) or (args.use_gen_split and args.u
 if args.do_pp_recursion_gen_split and not args.use_gen_split:
   print("`do_pp_recursion_gen_split` can only be used when `--use_gen_split` is used!")
   raise Exception("`do_pp_recursion_gen_split` can only be used when `--use_gen_split` is used!")
+
+if args.do_cp_recursion_gen_split and not args.use_gen_split:
+  print("`do_cp_recursion_gen_split` can only be used when `--use_gen_split` is used!")
+  raise Exception("`do_cp_recursion_gen_split` can only be used when `--use_gen_split` is used!")
+
+if args.do_cp_recursion_gen_split and args.do_pp_recursion_gen_split:
+  print("`do_cp_recursion_gen_split` cannot be used with `do_pp_recursion_gen_split` at this time, due to slowness of these recursion splits we do just one at a time separate")
+  raise Exception("`do_cp_recursion_gen_split` cannot be used with `do_pp_recursion_gen_split` at this time, due to slowness of these recursion splits we do just one at a time separate")
+
+if args.cp_examples_only and (args.do_cp_recursion_gen_split or args.do_pp_recursion_gen_split):
+  print("`--cp_examples_only` not supported in combination with gen split selections, e.g. `--do_pp_recursion_gen_split` or `--do_cp_recursion_gen_split`.")
+  raise Exception("`--cp_examples_only` not supported in combination with gen split selections, e.g. `--do_pp_recursion_gen_split` or `--do_cp_recursion_gen_split`.")
+
 
 base_path = os.path.abspath(".")
 # Load dependency if not available.
@@ -200,16 +214,19 @@ else:
   elif args.use_gen_split:
     print("Using gen split, the `num_train_examples_to_check` argument will be ignored")
     print("Now load official Wu et al 2023 ReCOGS gen split\n(https://raw.githubusercontent.com/frankaging/ReCOGS/1b6eca8ff4dca5fd2fb284a7d470998af5083beb/recogs_positional_index/gen.tsv , associated with https://arxiv.org/abs/2303.13716 )")
-    filename = "gen_only_pp_recursion.tsv" if args.do_pp_recursion_gen_split else "gen_no_pp_recursion.tsv"
+    filename = "gen_only_pp_recursion.tsv" if args.do_pp_recursion_gen_split else ("gen_only_cp_recursion.tsv" if args.do_cp_recursion_gen_split else "gen_no_pp_or_cp_recursion.tsv")
     # one of official author's dataset for ReCOGS paper
     subprocess.run("wget https://raw.githubusercontent.com/frankaging/ReCOGS/1b6eca8ff4dca5fd2fb284a7d470998af5083beb/recogs_positional_index/gen.tsv", shell=True)
     subprocess.run(f"echo 'COGS Sentence	ReCOGS Logical Form	Distribution' > {filename}", shell=True)
-    if not args.do_pp_recursion_gen_split:
-      print("Note pp recursion split (which is slow) is left out by default, run `--do_pp_recursion_gen_split` to score that (it is supported)")
-      subprocess.run(f"cat gen.tsv | {optional_cp_filter} grep -v 'pp_recursion' >> {filename}", shell=True)
-    else:
+    if not args.do_pp_recursion_gen_split and not args.do_cp_recursion_gen_split:
+      print("Note pp recursion and cp recursion splits (which are slow) are left out by default, run `--do_pp_recursion_gen_split` or `--do_cp_recursion_gen_split` to score one of those at a time separately (they are supported)")
+      subprocess.run(f"cat gen.tsv | {optional_cp_filter} grep -v 'pp_recursion' | grep -v 'cp_recursion' >> {filename}", shell=True)
+    elif args.do_pp_recursion_gen_split:
       print("Just assessing pp recursion split (which is slow)")
-      subprocess.run(f"cat gen.tsv | {optional_cp_filter} grep 'pp_recursion' >> {filename}", shell=True)
+      subprocess.run(f"cat gen.tsv | grep 'pp_recursion' >> {filename}", shell=True)
+    elif args.do_cp_recursion_gen_split:
+      print("Just assessing cp recursion split (which is slow)")
+      subprocess.run(f"cat gen.tsv | grep 'cp_recursion' >> {filename}", shell=True)
 
 print(f"Using prepared datafile: '{filename}' (the filename should describe the dataset you expect to be evaluating with)")
 recogs_datafile = pd.read_csv(filename, delimiter="	")
