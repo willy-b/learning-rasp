@@ -18,8 +18,6 @@ You can run a demo and see the autoregressive output
 
 ```
 git clone https://github.com/willy-b/learning-rasp.git
-git checkout \
-recogs-like-grammar-multiple-templates-supported-but-switch-to-word-level-tokens
 python recogs_examples_in_rasp.py 
 ```
 
@@ -427,6 +425,5 @@ You can run a demo and see the autoregressive output
 
 ```
 git clone https://github.com/willy-b/learning-rasp.git
-git checkout recogs-like-grammar-multiple-templates-supported-but-switch-to-word-level-tokens
 python recogs_examples_in_rasp.py
 ```
