@@ -699,6 +699,7 @@ nv_in_input_count = selector_width(select(nv_in_input_sequence, 1, ==));
 nv_in_output_sequence = OUTPUT_MASK*(indicator(pos_tokens == 7 or pos_tokens == 8) + indicator(pos_tokens_vmap1 == 9 or pos_tokens_vmap2 == 10 or pos_tokens_vmap1 == 11 or pos_tokens_vmap2 == 12 or pos_tokens_vmap3 == 13 or pos_tokens_vmap4 == 14 or pos_tokens_vmap1 == 15 or pos_tokens_vmap1 == 16 or pos_tokens_vmap1 == 17 or pos_tokens_vmap1 == 18 or pos_tokens_vmap2 == 19 or pos_tokens_vmap2 == 20 or pos_tokens_vmap1==21));
 nv_in_output_count = selector_width(select(nv_in_output_sequence, 1, ==));
 
+any_v_inf_taking = aggregate(select(np_v_inf_taking_to_v_inf, 1, ==), 1);
 # introducing variables
 output = "";
 # definite article word handling
@@ -710,13 +711,14 @@ input_nv_sorted_by_type = input_tokens_sorted_by_type * (input_noun_mask_sorted 
 target_word_token = aggregate(select(indices, nv_in_output_count, ==), normalize_nv(input_nv_sorted_by_type)) if (not has_star or last_output_is_star) else "*";
 # subtract 1 when matching for producing the index because we just output the additional word by then
 target_word_index = aggregate(select(indices, nv_in_output_count-1, ==), input_indices_sorted);
+target_word_index_v_inf_2nd_verb = aggregate(select(indices, nv_in_input_count-1, ==), input_indices_sorted);
 
 output = target_word_token if ((num_tokens_in_output_excluding_asterisks % 5) == 0) else output;
 output = "(" if ((num_tokens_in_output_excluding_asterisks % 5) == 1) else output;
 output = target_word_index if ((num_tokens_in_output_excluding_asterisks % 5) == 2) else output;
 output = ")" if ((num_tokens_in_output_excluding_asterisks % 5) == 3) else output;
 # note that when nv_in_output_count == nv_in_input_count, we will add AND instead of ";"
-output = (";" if (5 * nv_in_input_count - 1 > num_tokens_in_output_excluding_asterisks) else "AND") if (num_tokens_in_output_excluding_asterisks % 5 == 4) else output;
+output = (";" if (5 * (nv_in_input_count - (1 if any_v_inf_taking == 1 else 0)) - 1 > num_tokens_in_output_excluding_asterisks) else "AND") if (num_tokens_in_output_excluding_asterisks % 5 == 4) else output;
 
 # if we didn't have an input/output separator that needs to be output
 output = "|" if num_pipes_in_output == 0 else output;
@@ -733,7 +735,7 @@ def template_size(template_name) {
  "v_trans_not_omissible_pp_p1": 1,
  "v_trans_not_omissible_pp_p2": 2,
  "v_cp_taking": 2,
- "v_inf_taking": 4,
+ "v_inf_taking": 5,
  "v_unacc_p1": 2,
  "v_unacc_p2": 1,
  "v_unacc_pp_p1": 1,
@@ -809,7 +811,7 @@ template_mapping3 = {
  "v_trans_not_omissible_pp_p1": "",
  "v_trans_not_omissible_pp_p2": "",
  "v_cp_taking": "",
- "v_inf_taking": "agent",
+ "v_inf_taking": "v_inf_taking_last_verb_placeholder",
  "v_unacc_p1": "",
  "v_unacc_p2": "",
  "v_unacc_pp_p1": "",
@@ -823,14 +825,38 @@ template_mapping3 = {
  "v_dat_pp_p3": "",
  "v_dat_pp_p4": "agent"
 };
+template_mapping4 = {
+ "": "",
+ "v_trans_omissible_p1": "",
+ "v_trans_omissible_p2": "",
+ "v_trans_omissible_pp_p1": "",
+ "v_trans_omissible_pp_p2": "",
+ "v_trans_not_omissible": "",
+ "v_trans_not_omissible_pp_p1": "",
+ "v_trans_not_omissible_pp_p2": "",
+ "v_cp_taking": "",
+ "v_inf_taking": "agent",
+ "v_unacc_p1": "",
+ "v_unacc_p2": "",
+ "v_unacc_pp_p1": "",
+ "v_unacc_pp_p2": "",
+ "v_unerg": "",
+ "v_inf": "",
+ "v_dat_p1": "",
+ "v_dat_p2": "",
+ "v_dat_pp_p1": "",
+ "v_dat_pp_p2": "",
+ "v_dat_pp_p3": "",
+ "v_dat_pp_p4": ""
+};
 
-return template_mapping1[template_name] if idx == 0 else (template_mapping2[template_name] if idx == 1 else (template_mapping3[template_name] if idx == 2 else ""));
+return template_mapping1[template_name] if idx == 0 else (template_mapping2[template_name] if idx == 1 else (template_mapping3[template_name] if idx == 2 else (template_mapping4[template_name] if idx == 3 else "")));
 }
 
 atrxc_in_output_sequence = OUTPUT_MASK*(indicator(tokens == "agent" or tokens == "theme" or tokens=="recipient" or tokens=="xcomp" or tokens =="ccomp"));
 agent_theme_recipient_xcomp_ccomp_output_count = selector_width(select(atrxc_in_output_sequence, 1, ==));
-after_intro_idx = (nv_in_output_count - nv_in_input_count + agent_theme_recipient_xcomp_ccomp_output_count) if nv_in_output_count >= nv_in_input_count else 0;
-after_intro_num_tokens_in_output_excluding_asterisks = num_tokens_in_output_excluding_asterisks - ((5 * nv_in_input_count));
+after_intro_idx = (nv_in_output_count - nv_in_input_count + (1 if any_v_inf_taking == 1 else 0) + agent_theme_recipient_xcomp_ccomp_output_count) if nv_in_output_count + (1 if any_v_inf_taking == 1 else 0) >= nv_in_input_count else 0;
+after_intro_num_tokens_in_output_excluding_asterisks = num_tokens_in_output_excluding_asterisks - ((5 * (nv_in_input_count - (1 if any_v_inf_taking else 0))));
 
 pps_in_input_sequence = INPUT_MASK*(indicator(pos_tokens == 2));
 pps_in_input_count = selector_width(select(pps_in_input_sequence, 1, ==));
@@ -906,14 +932,13 @@ template_name = "v_dat_pp_p2" if (any_v_dat_pp_p2 == 1) else template_name;
 
 template_mapping_output = get_template_mapping(template_name, after_intro_idx);
 
-after_intro_target_token = template_mapping_output if (after_intro_num_tokens_in_output_excluding_asterisks % 7 == 0) else after_intro_target_token;
+offset = (-5 if after_intro_idx > 2 else 0) if any_v_inf_taking == 1 else 0;
+after_intro_target_token = template_mapping_output if ((after_intro_num_tokens_in_output_excluding_asterisks+offset) % 7 == 0) else after_intro_target_token;
 
-after_intro_target_token = "(" if (after_intro_num_tokens_in_output_excluding_asterisks % 7 == 1) else after_intro_target_token;
+after_intro_target_token = "(" if ((after_intro_num_tokens_in_output_excluding_asterisks+offset) % 7 == 1) else after_intro_target_token;
 
-# TODO get nps relative to the actual verb position
-left_idx_in_nps_zero_based = nv_in_output_count-1; # the one verb supported so far
-# TODO first we special case v_inf_taking_to_v_inf, but later let's make it more generic
-left_idx_in_nps_zero_based = (left_idx_in_nps_zero_based-1) if (template_name == "v_inf_taking" and after_intro_idx <= 2) else left_idx_in_nps_zero_based;
+left_idx_in_nvs_zero_based = nv_in_input_count-1; # the one verb supported so far
+left_idx_in_nvs_zero_based = (left_idx_in_nvs_zero_based-1) if (template_name == "v_inf_taking" and after_intro_idx <= 2) else left_idx_in_nvs_zero_based;
 
 # select against nv index excluding any (pp np ; do not confuse with np_pp, we want the left most child of np_pp)
 # create a sequence of np_det,np_prop indices excluding any np which is preceded by pp
@@ -933,27 +958,36 @@ np_prop_diag_mask = select(aggregate(np_prop_mask, 1), 1, ==) and select(indices
 no_pp_np_mask = 1 - aggregate((pp_one_after_mask and np_prop_diag_mask) or (pp_two_after_mask and np_det_diag_mask), 1);
 nps_without_pp_prefix_indices = selector_width(select(NOUN_MASK*no_pp_np_mask, 1, ==) and select(indices, indices, <=))*NOUN_MASK*no_pp_np_mask;
 
-left_idx = aggregate(select(indices, left_idx_in_nps_zero_based, ==), input_indices_sorted);
+left_idx = aggregate(select(indices, left_idx_in_nvs_zero_based, ==), input_indices_sorted);
 right_idx = aggregate(select(nps_without_pp_prefix_indices, after_intro_idx, ==), indices);
 
 # points to 2nd verb for xcomp for v_inf_taking_v_inf
-right_idx = aggregate(select(indices, (nv_in_output_count-1), ==), input_indices_sorted) if (template_name == "v_inf_taking" and after_intro_idx == 2) else right_idx;
+right_idx = aggregate(select(indices, (nv_in_output_count+(1 if any_v_inf_taking == 1 else 0)-1), ==), input_indices_sorted) if (template_name == "v_inf_taking" and after_intro_idx == 2) else right_idx;
 
 
 # points to 1st noun for 2nd v_inf agent in v_inf_taking_v_inf
-right_idx = aggregate(select(indices, 0, ==), input_indices_sorted) if (template_name == "v_inf_taking" and after_intro_idx == 3) else right_idx;
+right_idx = aggregate(select(indices, 0, ==), input_indices_sorted) if (template_name == "v_inf_taking" and after_intro_idx == 4) else right_idx;
 
-after_intro_target_token = left_idx if (after_intro_num_tokens_in_output_excluding_asterisks % 7 == 2) else after_intro_target_token;
+after_intro_target_token = left_idx if ((after_intro_num_tokens_in_output_excluding_asterisks+offset) % 7 == 2) else after_intro_target_token;
 
-after_intro_target_token = "," if (after_intro_num_tokens_in_output_excluding_asterisks % 7 == 3) else after_intro_target_token;
+after_intro_target_token = "," if ((after_intro_num_tokens_in_output_excluding_asterisks+offset) % 7 == 3) else after_intro_target_token;
 
-after_intro_target_token = right_idx if (after_intro_num_tokens_in_output_excluding_asterisks % 7 == 4) else after_intro_target_token;
+after_intro_target_token = right_idx if ((after_intro_num_tokens_in_output_excluding_asterisks+offset) % 7 == 4) else after_intro_target_token;
 
-after_intro_target_token = ")" if (after_intro_num_tokens_in_output_excluding_asterisks % 7 == 5) else after_intro_target_token;
+after_intro_target_token = ")" if ((after_intro_num_tokens_in_output_excluding_asterisks+offset) % 7 == 5) else after_intro_target_token;
 
-after_intro_target_token = "AND" if (after_intro_num_tokens_in_output_excluding_asterisks % 7 == 6 and not (template_mapping_output == "")) else after_intro_target_token;
+after_intro_target_token = "AND" if ((after_intro_num_tokens_in_output_excluding_asterisks+offset) % 7 == 6 and not (template_mapping_output == "") and (any_v_inf_taking == 0 or after_intro_idx < 3 or after_intro_idx > 3)) else after_intro_target_token;
 
-output = after_intro_target_token if (nv_in_output_count >= nv_in_input_count and after_intro_num_tokens_in_output_excluding_asterisks >= 0) else output;
+# v_inf 2nd verb handling
+last_verb = aggregate(select(indices, nv_in_output_count, ==), normalize_nv(input_nv_sorted_by_type));
+after_intro_target_token = last_verb if (any_v_inf_taking and after_intro_target_token == "v_inf_taking_last_verb_placeholder") else after_intro_target_token;
+after_intro_target_token = "(" if (any_v_inf_taking and after_intro_idx == 3 and ((after_intro_num_tokens_in_output_excluding_asterisks - (after_intro_idx-1)*7) % 5) == 1) else after_intro_target_token;
+after_intro_target_token = target_word_index_v_inf_2nd_verb if (any_v_inf_taking and after_intro_idx == 3 and ((after_intro_num_tokens_in_output_excluding_asterisks - (after_intro_idx-1)*7) % 5) == 2) else after_intro_target_token;
+after_intro_target_token = ")" if (any_v_inf_taking and after_intro_idx == 3 and ((after_intro_num_tokens_in_output_excluding_asterisks - (after_intro_idx-1)*7) % 5) == 3) else after_intro_target_token;
+after_intro_target_token = "AND" if any_v_inf_taking and after_intro_idx == 3 and ((after_intro_num_tokens_in_output_excluding_asterisks - (after_intro_idx-1)*7) % 5 == 4) else after_intro_target_token;
+# end v_inf 2nd verb handling
+
+output = after_intro_target_token if (nv_in_output_count >= nv_in_input_count - (1 if any_v_inf_taking == 1 else 0) and after_intro_num_tokens_in_output_excluding_asterisks >= 0) else output;
 
 current_pp = aggregate(select(pps_index, nmods_and_pps_in_output_count+1, ==), tokens) if pps_in_input_count > 0 else "";
 current_pp = "" if current_pp == 0 else current_pp;
@@ -968,9 +1002,9 @@ current_nmod_token = (after_nmod_idx) if pps_in_input_count > 0 and after_intro_
 current_nmod_token = ")" if after_intro_num_tokens_in_output_excluding_asterisks % 7 == 5 else current_nmod_token;
 current_nmod_token = ("AND" if nmods_and_pps_in_output_count < pps_in_input_count else "") if after_intro_num_tokens_in_output_excluding_asterisks % 7 == 6 else current_nmod_token;
 after_intro_and_relationships_nmod_token = current_nmod_token if nmods_and_pps_in_output_count <= pps_in_input_count else "";
-num_tokens_in_nmod_section = after_intro_num_tokens_in_output_excluding_asterisks - template_size(template_name)*7 + 1;
+num_tokens_in_nmod_section = after_intro_num_tokens_in_output_excluding_asterisks - template_size(template_name)*7+offset + 1;
 
-output = after_intro_and_relationships_nmod_token if (template_mapping_output == "" and after_intro_num_tokens_in_output_excluding_asterisks >= template_size(template_name)*7 - 1 and num_tokens_in_nmod_section < 7*pps_in_input_count and pps_in_input_count > 0) else output;
+output = after_intro_and_relationships_nmod_token if (template_mapping_output == "" and after_intro_num_tokens_in_output_excluding_asterisks >= template_size(template_name)*7+offset - 1 and num_tokens_in_nmod_section < 7*pps_in_input_count and pps_in_input_count > 0) else output;
 
 # use `set example [your example!]` followed by `output;` to get the next token in the translation of your input COGS grammar sentence to ReCOGS logical form
 # see recogs_examples_in_rasp.py for an example (run with `python recogs_examples_in_rasp.py`)
