@@ -180,7 +180,7 @@ def get_percentages_with_ci_groupby_binary_data(df, groupby_key, alpha=0.05, pri
     ci_highs[idx] = ci[1]*100.0
     p[idx] = float(k)/float(n)*100
     if print_result:
-      print_stdout_and_file(f"{idx}: {p[idx]:0.2f}% ({(1-alpha)*100:0.2f}% confidence interval: {ci_lows[idx]:0.2f}% to {ci_highs[idx]:0.2f}% ({k} out of {n})", file_handle)
+      print_stdout_and_file(f"{idx}: {p[idx]:0.2f}% ({(1-alpha)*100:0.2f}% confidence interval: {ci_lows[idx]:0.2f}% to {ci_highs[idx]:0.2f}% ({k} out of {n}))", file_handle)
 
   c.insert(0, "hits", s)
   c.insert(0, "percentage", p)
