@@ -7,13 +7,15 @@ import argparse
 
 argparser = argparse.ArgumentParser()
 # this only produces a score on the training set of ReCOGS by default
-argparser.add_argument("--num_train_examples_to_check", type=int, default=5)
+argparser.add_argument("--num_train_examples_to_check", type=int, default=5) # I like people running demos to see the score output quick and then they can do a longer run later if they want
 argparser.add_argument("--use_dev_split", action="store_true")
 argparser.add_argument("--use_gen_split", action="store_true")
 argparser.add_argument("--use_test_split", action="store_true")
+argparser.add_argument("--cp_examples_only", action="store_true")
 # if Google Colab or other environment crashes, you may want to pick up where it left off
 argparser.add_argument("--skip_rows", type=int, default=0)
 argparser.add_argument("--do_pp_recursion_gen_split", action="store_true") # needs to be done separately as very slow
+argparser.add_argument("--do_cp_recursion_gen_split", action="store_true") # needs to be done separately as very slow
 args = argparser.parse_args()
 if (args.use_gen_split and args.use_dev_split) or (args.use_gen_split and args.use_test_split) or (args.use_dev_split and args.use_test_split):
   print("Please select just one of the arguments `--use_gen_split`,`--use_dev_split`, or `--use_test_split`")
@@ -22,6 +24,19 @@ if (args.use_gen_split and args.use_dev_split) or (args.use_gen_split and args.u
 if args.do_pp_recursion_gen_split and not args.use_gen_split:
   print("`do_pp_recursion_gen_split` can only be used when `--use_gen_split` is used!")
   raise Exception("`do_pp_recursion_gen_split` can only be used when `--use_gen_split` is used!")
+
+if args.do_cp_recursion_gen_split and not args.use_gen_split:
+  print("`do_cp_recursion_gen_split` can only be used when `--use_gen_split` is used!")
+  raise Exception("`do_cp_recursion_gen_split` can only be used when `--use_gen_split` is used!")
+
+if args.do_cp_recursion_gen_split and args.do_pp_recursion_gen_split:
+  print("`do_cp_recursion_gen_split` cannot be used with `do_pp_recursion_gen_split` at this time, due to slowness of these recursion splits we do just one at a time separate")
+  raise Exception("`do_cp_recursion_gen_split` cannot be used with `do_pp_recursion_gen_split` at this time, due to slowness of these recursion splits we do just one at a time separate")
+
+if args.cp_examples_only and (args.do_cp_recursion_gen_split or args.do_pp_recursion_gen_split):
+  print("`--cp_examples_only` not supported in combination with gen split selections, e.g. `--do_pp_recursion_gen_split` or `--do_cp_recursion_gen_split`.")
+  raise Exception("`--cp_examples_only` not supported in combination with gen split selections, e.g. `--do_pp_recursion_gen_split` or `--do_cp_recursion_gen_split`.")
+
 
 base_path = os.path.abspath(".")
 # Load dependency if not available.
@@ -57,8 +72,10 @@ input_lines = [bytes(line, 'utf8') for line in rasp_setup_lines]
 stdin_handle.writelines(input_lines)
 stdin_handle.flush()
 
+running_scores_logfile_handle = open("recogs_examples_in_rasp_running_scores.log", "w")
+
 # discard all output from running the setup part of the script
-input_lines = ["autoregressive_output = output;\n"]
+input_lines = ["output;\n", "autoregressive_output = output;\n"]
 input_lines = [bytes(line, 'utf8') for line in input_lines]
 stdin_handle.writelines(input_lines)
 stdin_handle.flush()
@@ -85,9 +102,13 @@ def process_example(example, suppress_output=True, debug_mode=False):
     nextcharacter = outputline.split("=")[1].split("m[")[1].split("]")[0]
     current_example.append(nextcharacter)
   translation = " ".join(current_example).split("|")
-  if not suppress_output:
-    print(f"{translation[0]}\n{translation[1]}")
+  print(f"{translation[0]}\n{translation[1]}")
   return translation[1]
+
+def print_stdout_and_file(string_to_print, file_handle):
+  print(string_to_print)
+  print(string_to_print, file=file_handle)
+  file_handle.flush()
 
 print("""
 
@@ -121,7 +142,12 @@ def semantic_exact_match(lf_predicted, lf_actual):
 def get_clopper_pearson_confidence_interval(n, k):
   alpha = 0.05
   from scipy.stats import beta
+  # Reference: https://en.wikipedia.org/w/index.php?title=Binomial_proportion_confidence_interval&oldid=1252517214#Clopper%E2%80%93Pearson_interval
+  # Wikipedia's underlying reference for the beta distribution form https://arxiv.org/abs/1303.1288 equation 4 is also useful,
   cp_confidence_interval = beta.ppf([alpha/2.0, 1-alpha/2.0], [k, k+1],[n-k + 1, n-k])
+  # Below https://arxiv.org/abs/1303.1288 eqn 4 they discuss the n == k and k == 0 cases, 
+  # which justify the following assignments below and the use of alpha/2.0 (two-tailed test adjustment) above even when we find that k==n or k==0.
+  # they give a closed form for these special cases but one can check it is what beta.ppf (which covers all cases) will return there as well.
   if n == k:
     cp_confidence_interval[1] = 1.0
   if k == 0:
@@ -137,7 +163,7 @@ def get_semantic_exact_match_score(lfs_predicted, lfs_actual):
   semantic_exact_match_score_confidence_interval = get_clopper_pearson_confidence_interval(count, num_right_semantic_exact_match)
   return mean_semantic_exact_match_score, num_right_semantic_exact_match, semantic_exact_matches, semantic_exact_match_score_confidence_interval
 
-def get_percentages_with_ci_groupby_binary_data(df, groupby_key, alpha=0.05, print_result=False):
+def get_percentages_with_ci_groupby_binary_data(df, groupby_key, alpha=0.05, print_result=False, file_handle=None):
   dfgb = df.groupby(groupby_key)
   c = dfgb.count()
   s = dfgb.sum()
@@ -154,55 +180,63 @@ def get_percentages_with_ci_groupby_binary_data(df, groupby_key, alpha=0.05, pri
     ci_highs[idx] = ci[1]*100.0
     p[idx] = float(k)/float(n)*100
     if print_result:
-      print(f"{idx}: {p[idx]:0.2f}% ({(1-alpha)*100:0.2f}% confidence interval: {ci_lows[idx]:0.2f}% to {ci_highs[idx]:0.2f}% ({k} out of {n})")
+      print_stdout_and_file(f"{idx}: {p[idx]:0.2f}% ({(1-alpha)*100:0.2f}% confidence interval: {ci_lows[idx]:0.2f}% to {ci_highs[idx]:0.2f}% ({k} out of {n}))", file_handle)
+
   c.insert(0, "hits", s)
   c.insert(0, "percentage", p)
   c.insert(0, "percentage_ci_high", ci_highs)
   c.insert(0, "percentage_ci_low", ci_lows)
   return c
 
+optional_cp_filter = "grep 'that' |" if args.cp_examples_only else ""
+filename = None
 if score_on_train_sample:
   print("Now load official Wu et al 2023 ReCOGS training examples\n(sample from https://raw.githubusercontent.com/frankaging/ReCOGS/1b6eca8ff4dca5fd2fb284a7d470998af5083beb/recogs_positional_index/train.tsv , associated with https://arxiv.org/abs/2303.13716 )")
-  if not os.path.exists("train_in_distribution_no_sprinkles_or_cp.tsv"):
-    # one of official author's dataset for ReCOGS paper
-    subprocess.run("wget https://raw.githubusercontent.com/frankaging/ReCOGS/1b6eca8ff4dca5fd2fb284a7d470998af5083beb/recogs_positional_index/train.tsv", shell=True)
-    subprocess.run("echo 'COGS Sentence	ReCOGS Logical Form	Distribution' > train_in_distribution_no_sprinkles_or_cp.tsv", shell=True)
-    subprocess.run("cat train.tsv | grep 'in_distribution' | grep -v 'sprinkle' | grep -v 'that' >> train_in_distribution_no_sprinkles_or_cp.tsv", shell=True)
-  recogs_datafile = pd.read_csv("train_in_distribution_no_sprinkles_or_cp.tsv", delimiter="	")
+  filename = "train_in_distribution_no_augmentations.tsv"
+  # one of official author's datasets for ReCOGS paper
+  subprocess.run("wget https://raw.githubusercontent.com/frankaging/ReCOGS/1b6eca8ff4dca5fd2fb284a7d470998af5083beb/recogs_positional_index/train.tsv", shell=True)
+  subprocess.run(f"echo 'COGS Sentence	ReCOGS Logical Form	Distribution' > {filename}", shell=True)
+  subprocess.run(f"cat train.tsv | grep 'in_distribution' | {optional_cp_filter} grep -v 'sprinkle' >> {filename}", shell=True)
 else:
   if args.use_dev_split:
     print("Using dev split, the `num_train_examples_to_check` argument will be ignored")
-    print("Now load official Wu et al 2023 ReCOGS dev split (excluding complement phrases as not yet supported)\n(https://raw.githubusercontent.com/frankaging/ReCOGS/1b6eca8ff4dca5fd2fb284a7d470998af5083beb/recogs_positional_index/dev.tsv , associated with https://arxiv.org/abs/2303.13716 )")
-    if not os.path.exists("dev_no_cp.tsv"):
-      # one of official author's dataset for ReCOGS paper
-      subprocess.run("wget https://raw.githubusercontent.com/frankaging/ReCOGS/1b6eca8ff4dca5fd2fb284a7d470998af5083beb/recogs_positional_index/dev.tsv", shell=True)
-      subprocess.run("echo 'COGS Sentence	ReCOGS Logical Form	Distribution' > dev_no_cp.tsv", shell=True)
-      subprocess.run("cat dev.tsv | grep -v 'that' >> dev_no_cp.tsv", shell=True)
-    recogs_datafile = pd.read_csv("dev_no_cp.tsv", delimiter="	")
+    print("Now load official Wu et al 2023 ReCOGS dev split\n(https://raw.githubusercontent.com/frankaging/ReCOGS/1b6eca8ff4dca5fd2fb284a7d470998af5083beb/recogs_positional_index/dev.tsv , associated with https://arxiv.org/abs/2303.13716 )")
+    filename = "dev_with_header.tsv"
+    # one of official author's datasets for ReCOGS paper
+    subprocess.run("wget https://raw.githubusercontent.com/frankaging/ReCOGS/1b6eca8ff4dca5fd2fb284a7d470998af5083beb/recogs_positional_index/dev.tsv", shell=True)
+    subprocess.run(f"echo 'COGS Sentence	ReCOGS Logical Form	Distribution' > {filename}", shell=True)
+    if len(optional_cp_filter) > 0:
+      optional_cp_filter = f"| {optional_cp_filter}"
+    subprocess.run(f"cat dev.tsv {optional_cp_filter} >> {filename}", shell=True)
   elif args.use_test_split:
     print("Using test split, the `num_train_examples_to_check` argument will be ignored")
-    print("Now load official Wu et al 2023 ReCOGS test split (excluding complement phrases as not yet supported)\n(https://raw.githubusercontent.com/frankaging/ReCOGS/1b6eca8ff4dca5fd2fb284a7d470998af5083beb/recogs_positional_index/test.tsv , associated with https://arxiv.org/abs/2303.13716 )")
-    if not os.path.exists("test_no_cp.tsv"):
-      # one of official author's dataset for ReCOGS paper
-      subprocess.run("wget https://raw.githubusercontent.com/frankaging/ReCOGS/1b6eca8ff4dca5fd2fb284a7d470998af5083beb/recogs_positional_index/test.tsv", shell=True)
-      subprocess.run("echo 'COGS Sentence	ReCOGS Logical Form	Distribution' > test_no_cp.tsv", shell=True)
-      subprocess.run("cat test.tsv | grep -v 'that' >> test_no_cp.tsv", shell=True)
-    recogs_datafile = pd.read_csv("test_no_cp.tsv", delimiter="	")
+    print("Now load official Wu et al 2023 ReCOGS test split\n(https://raw.githubusercontent.com/frankaging/ReCOGS/1b6eca8ff4dca5fd2fb284a7d470998af5083beb/recogs_positional_index/test.tsv , associated with https://arxiv.org/abs/2303.13716 )")
+    filename = "test_with_header.tsv"
+    if len(optional_cp_filter) > 0:
+      optional_cp_filter = f"| {optional_cp_filter}"
+    # one of official author's dataset for ReCOGS paper
+    subprocess.run("wget https://raw.githubusercontent.com/frankaging/ReCOGS/1b6eca8ff4dca5fd2fb284a7d470998af5083beb/recogs_positional_index/test.tsv", shell=True)
+    subprocess.run(f"echo 'COGS Sentence	ReCOGS Logical Form	Distribution' > {filename}", shell=True)
+    subprocess.run(f"cat test.tsv {optional_cp_filter} >> {filename}", shell=True)
   elif args.use_gen_split:
     print("Using gen split, the `num_train_examples_to_check` argument will be ignored")
-    print("Now load official Wu et al 2023 ReCOGS gen split (excluding complement phrases as not yet supported)\n(https://raw.githubusercontent.com/frankaging/ReCOGS/1b6eca8ff4dca5fd2fb284a7d470998af5083beb/recogs_positional_index/gen.tsv , associated with https://arxiv.org/abs/2303.13716 )")
-    filename = "gen_no_cp_only_pp_recursion.tsv" if args.do_pp_recursion_gen_split else "gen_no_cp_no_pp_recursion.tsv"
+    print("Now load official Wu et al 2023 ReCOGS gen split\n(https://raw.githubusercontent.com/frankaging/ReCOGS/1b6eca8ff4dca5fd2fb284a7d470998af5083beb/recogs_positional_index/gen.tsv , associated with https://arxiv.org/abs/2303.13716 )")
+    filename = "gen_only_pp_recursion.tsv" if args.do_pp_recursion_gen_split else ("gen_only_cp_recursion.tsv" if args.do_cp_recursion_gen_split else "gen_no_pp_or_cp_recursion.tsv")
     # one of official author's dataset for ReCOGS paper
     subprocess.run("wget https://raw.githubusercontent.com/frankaging/ReCOGS/1b6eca8ff4dca5fd2fb284a7d470998af5083beb/recogs_positional_index/gen.tsv", shell=True)
     subprocess.run(f"echo 'COGS Sentence	ReCOGS Logical Form	Distribution' > {filename}", shell=True)
-    if not args.do_pp_recursion_gen_split:
-      print("Note pp recursion split (which is slow) is left out by default, run `--do_pp_recursion_gen_split` to score that (it is supported)")
-      subprocess.run(f"cat gen.tsv | grep -v 'that' | grep -v 'pp_recursion' >> {filename}", shell=True)
-      recogs_datafile = pd.read_csv("gen_no_cp_no_pp_recursion.tsv", delimiter="	")
-    else:
+    if not args.do_pp_recursion_gen_split and not args.do_cp_recursion_gen_split:
+      print("Note pp recursion and cp recursion splits (which are slow) are left out by default, run `--do_pp_recursion_gen_split` or `--do_cp_recursion_gen_split` to score one of those at a time separately (they are supported)")
+      subprocess.run(f"cat gen.tsv | {optional_cp_filter} grep -v 'pp_recursion' | grep -v 'cp_recursion' >> {filename}", shell=True)
+    elif args.do_pp_recursion_gen_split:
       print("Just assessing pp recursion split (which is slow)")
-      subprocess.run(f"cat gen.tsv | grep -v 'that' | grep 'pp_recursion' >> {filename}", shell=True)
-      recogs_datafile = pd.read_csv(f"{filename}", delimiter="	")
+      subprocess.run(f"cat gen.tsv | grep 'pp_recursion' >> {filename}", shell=True)
+    elif args.do_cp_recursion_gen_split:
+      print("Just assessing cp recursion split (which is slow)")
+      subprocess.run(f"cat gen.tsv | grep 'cp_recursion' >> {filename}", shell=True)
+
+print(f"Using prepared datafile: '{filename}' (the filename should describe the dataset you expect to be evaluating with)")
+recogs_datafile = pd.read_csv(filename, delimiter="	")
 
 pos_desc = "first"
 if args.skip_rows > 0:
@@ -220,12 +254,14 @@ else:
   labels = recogs_datafile["Distribution"]
 
 label = "test" if args.use_test_split else ("dev" if args.use_dev_split else ("gen" if args.use_gen_split else "data"))
+disclaimer = "(omitting training data augmentations like sprinkles or preposing as not supported in the grammar of this Restricted Access Sequence Processing Transformer equivalent program and irrelevant to dev,test,gen sets)" if score_on_train_sample else ""
 sentences = [sentence.replace(" .", "").replace(".", "") for sentence in sentences]
 lfs_computed = []
 semantic_exact_matches = []
 for idx in range(len(sentences)):
   try:
-    output = process_example(sentences[idx], False)
+    suppress_output = len(sentences)>1000
+    output = process_example(sentences[idx], suppress_output)
   except:
     print(f"Could not process input '{sentences[idx]}'")
     output = ""
@@ -235,13 +271,13 @@ for idx in range(len(sentences)):
   k_sem_matches = np.array(semantic_exact_matches).sum()
   sem_pct = k_sem_matches/n*100.0
   sem_ci_pct = get_clopper_pearson_confidence_interval(n, k_sem_matches)*100.0
-  print(f"Semantic exact match score on {pos_desc} {n} of ReCOGS_pos {label}:\n(omitting CP and sprinkles or preposing as not supported in the grammar of this Restricted Access Sequence Processing Transformer equivalent program yet)\n{sem_pct:0.2f}% or {k_sem_matches} out of {n} (95% confidence interval: {sem_ci_pct[0]:0.2f}% to {sem_ci_pct[1]:0.2f}%)")
+  print_stdout_and_file(f"Semantic exact match score on {pos_desc} {n} of ReCOGS_pos {label}:\n{disclaimer}\n{sem_pct:0.2f}% or {k_sem_matches} out of {n} (95% confidence interval: {sem_ci_pct[0]:0.2f}% to {sem_ci_pct[1]:0.2f}%)", running_scores_logfile_handle)
   if args.use_gen_split:
         gen_sem_df = pd.DataFrame([{"Semantic Exact Match": semantic_exact_matches[jdx], "Category": labels[jdx]} for jdx in range(idx+1)], columns=["Semantic Exact Match", "Category"])
-        print("\n")
-        print(f"Semantic Exact Match % by category:")
-        sem_by_category_with_ci = get_percentages_with_ci_groupby_binary_data(gen_sem_df, "Category", print_result=True)
-        print("\n")
+        print_stdout_and_file("\n", running_scores_logfile_handle)
+        print_stdout_and_file(f"Semantic Exact Match % by category:", running_scores_logfile_handle)
+        sem_by_category_with_ci = get_percentages_with_ci_groupby_binary_data(gen_sem_df, "Category", print_result=True, file_handle=running_scores_logfile_handle)
+        print_stdout_and_file("\n", running_scores_logfile_handle)
   if idx % 10 == 0:
     # update CSV (these are small so can rewrite each time)
     output_df = pd.DataFrame([{"Input Sentence": sentences[jdx], "Logical Form Predicted": lfs_computed[jdx], "Label": labels[jdx]} for jdx in range(idx+1)], columns=["Input Sentence", "Logical Form Predicted","Label"])
@@ -250,34 +286,36 @@ for idx in range(len(sentences)):
 output_df = pd.DataFrame([{"Input Sentence": sentences[jdx], "Logical Form Predicted": lfs_computed[jdx]} for jdx in range(len(lfs_computed))], columns=["Input Sentence", "Logical Form Predicted"])
 output_df.to_csv("lf_output.tsv", index=False, sep="	")
 
-# note not finished with the grammar yet and it will, when scored by Exact Match, systematically miss the v_inf_taking_to_v_inf (e.g. "the scientist wanted to read") due to misordered output vs reference
-# in ReCOGS "semantic exact match" they are still be correct as it ignores semantically meaningless reorderings but we can compute this also
+# in ReCOGS "semantic exact match" semantically meaningless reorderings are still correct, and that is our metric to report per Wu et al 2023,
+# but we check exact match as well since for ReCOGS_pos it should usually match on that as well (after reordering v_inf_taking_to_v_inf)
 exact_matches = [1.0 if lfs_computed[idx].strip().lower() == lfs_true[idx].strip().lower() else 0.0 for idx in range(len(lfs_computed))]
 mean_em_score = np.array(exact_matches).mean()
 num_em_right = np.array(exact_matches).sum()
+em_ci_pct = get_clopper_pearson_confidence_interval(len(lfs_computed), num_em_right)*100.0
 
-if score_on_train_sample:
-  print(f"Exact Match score on {pos_desc} {len(sentences)} of ReCOGS train:\n(omitting CP and sprinkles or preposing as not supported in the grammar of this Restricted Access Sequence Processing Transformer equivalent program yet)\n{mean_em_score*100}% or {num_em_right} out of {len(sentences)}")
-print("\n\n\n")
+print_stdout_and_file("\n\n\n", running_scores_logfile_handle)
+print_stdout_and_file(f"Exact Match score on {pos_desc} {len(sentences)} of ReCOGS {label}:\n{disclaimer}\n{mean_em_score*100}% or {num_em_right} out of {len(sentences)} (95% confidence interval: {em_ci_pct[0]:0.2f}% to {em_ci_pct[1]:0.2f}%)", running_scores_logfile_handle)
+print_stdout_and_file("\n\n\n", running_scores_logfile_handle)
 
 mean_semantic_exact_match_score, num_right_semantic_exact_match, semantic_exact_matches, semantic_exact_match_score_confidence_interval = get_semantic_exact_match_score(lfs_computed, lfs_true)
-print("\n\n\n")
-if score_on_train_sample:
-  print(f"Semantic exact match score on {pos_desc} {len(sentences)} of ReCOGS_pos train:\n(omitting CP and sprinkles or preposing as not supported in the grammar of this Restricted Access Sequence Processing Transformer equivalent program yet)\n{mean_semantic_exact_match_score*100:0.2f}% or {num_right_semantic_exact_match} out of {len(sentences)} (95% confidence interval: {semantic_exact_match_score_confidence_interval[0]*100:0.2f}% to {semantic_exact_match_score_confidence_interval[1]*100:0.2f}%)")
-else:
-  print(f"Semantic exact match score on {pos_desc} {len(sentences)} of ReCOGS_pos {label}:\n(omitting CP as not supported in the grammar of this Restricted Access Sequence Processing Transformer equivalent program yet)\n{mean_semantic_exact_match_score*100:0.2f}% or {num_right_semantic_exact_match} out of {len(sentences)} (95% confidence interval: {semantic_exact_match_score_confidence_interval[0]*100:0.2f}% to {semantic_exact_match_score_confidence_interval[1]*100:0.2f}%)")
-  if args.use_gen_split:
-    gen_sem_df = pd.DataFrame([{"Semantic Exact Match": semantic_match_scores[jdx], "Category": labels[jdx]} for jdx in range(len(lfs_computed))], columns=["Semantic Exact Match", "Category"])
-    print("\n")
-    print(f"Semantic Exact Match % by category:")
-    sem_by_category_with_ci = get_percentages_with_ci_groupby_binary_data(gen_sem_df, "Category", print_result=True)
-    print("\n")
+print_stdout_and_file("\n\n\n", running_scores_logfile_handle)
 
-semantic_mismatches = []
-for idx in range(len(semantic_exact_matches)):
-  if semantic_exact_matches[idx] == 0:
-    semantic_mismatches.append((lfs_computed[idx], lfs_true[idx]))
-print(f"Mismatches: {semantic_mismatches}")
+print_stdout_and_file(f"Semantic exact match score on {pos_desc} {len(sentences)} of ReCOGS_pos {label}:\n{disclaimer}\n{mean_semantic_exact_match_score*100:0.2f}% or {num_right_semantic_exact_match} out of {len(sentences)} (95% confidence interval: {semantic_exact_match_score_confidence_interval[0]*100:0.2f}% to {semantic_exact_match_score_confidence_interval[1]*100:0.2f}%)", file_handle=running_scores_logfile_handle)
+if args.use_gen_split:
+  gen_sem_df = pd.DataFrame([{"Semantic Exact Match": semantic_match_scores[jdx], "Category": labels[jdx]} for jdx in range(len(lfs_computed))], columns=["Semantic Exact Match", "Category"])
+  print_stdout_and_file("\n", running_scores_logfile_handle)
+  print_stdout_and_file(f"Semantic Exact Match % by category:", running_scores_logfile_handle)
+  sem_by_category_with_ci = get_percentages_with_ci_groupby_binary_data(gen_sem_df, "Category", print_result=True, file_handle=running_scores_logfile_handle)
+  print_stdout_and_file("\n", running_scores_logfile_handle)
+
+if score_on_train_sample:
+  semantic_mismatches = []
+  for idx in range(len(semantic_exact_matches)):
+    if semantic_exact_matches[idx] == 0:
+      semantic_mismatches.append((lfs_computed[idx], lfs_true[idx]))
+  print(f"Mismatches: {semantic_mismatches}")
+
+running_scores_logfile_handle.close()
 
 # quit RASP
 input_lines = [bytes("quit()\n", 'utf8')]
