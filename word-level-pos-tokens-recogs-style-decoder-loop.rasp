@@ -2,7 +2,8 @@
 
 # Note, it is simpler and more performant to just train the Transformer on examples!
 # This is an academic exercise, writing a neural network compatible program by hand in the Restricted Access Sequence Processing (compilable to Transformer) language (Weiss et al 2021, https://arxiv.org/abs/2106.06981 )
-# to work towards eventually proving a Transformer can perform a particular type of solution (we will be building a grammar based and compositional solution).
+# to prove a Transformer can perform a particular type of solution (we will be building a grammar based and compositional solution).
+# (See the draft paper at https://raw.githubusercontent.com/willy-b/RASP-for-ReCOGS/main/rasp-for-recogs_pos-wbruns-2024-draft.pdf .)
 
 # See recogs_examples_in_rasp.py for a way to run this. Alteratively use the RASP interpreter REPL to run it line by line and see the output.
 
@@ -124,7 +125,7 @@ return nv_normalization_map[nv];
 }
 
 # Let us use word-level POS tokens and see if we can recognize parts of this grammar in the Restricted Access Sequence Processing (RASP) language in a systematic way (which means a Transformer can do it).
-# (This particular file is specifically practice for a ReCOGS model in RASP where a separate tokenizer/embedder replaces each word with a word-level token pre-tagged with the part-of-speech (POS) in the COGS grammar (e.g. det, common noun, proper noun, verb transitive object omissible; in some cases multiple of these are possible for a given word), as input to the RASP program which would then operate on that representation. Since these are simple tags mapped to each word it is presumed in the real Transformer this could easily be learned in the input embedding layer (or would be implicit in say a GloVe embedding if that were used).)
+# (This particular file is a ReCOGS model in RASP equivalent to a Transformer, with a word-level tokenizer and embedding layer. The model here starts by replacing each word with a word-level token pre-tagged with the part-of-speech (POS) in the COGS grammar (e.g. det, common noun, proper noun, verb transitive object omissible; in some cases multiple of these are possible for a given word) as the input to the rest of the RASP which performs select/aggregate operations equivalent to attention heads and elementwise operations realizable in MLP layers within a Transformer block. The simple part-of-speech tags we add to the words here are thought to be easily learned by a real Transformer in the input embedding layer perhaps also with first Transformer block (or would be implicit in say a GloVe embedding if that were used instead), consistent with e.g. Tenney et al 2019 finding that by the earliest layers of a BERT pretrained Transformer part of speech information is already found to have been learned to be represented by the model ("BERT Rediscovers the Classical NLP Pipeline" Tenney et al 2019 https://arxiv.org/abs/1905.05950; quote: "89% of part-of-speech tags are correct at layer 0", referring to more complicated text than we have here).)
 
 # we can tokenize as 2D, 1st dimension is index into wordlist,
 # second dimension is the POS which will be represented as a separate sequence of the following:
@@ -314,7 +315,7 @@ np_det_before = select(np_det_sequence, 1, ==) and select(indices-2, indices, ==
 np_det_after = select(np_det_sequence, 1, ==) and select(indices+1, indices, ==);
 np_prop_before = select(np_prop_sequence, 1, ==) and select(indices-1, indices, ==);
 np_prop_after = select(np_prop_sequence, 1, ==) and select(indices+1, indices, ==);
-# note we are temporarily ignoring the np_pp (prepositional phrase), which is an important case which will actually be a primary focus of our modeling
+# note we do not use a tree-based approach to handle np_pp but find that simply ignoring "pp np" when finding nouns for relationship right-indices is sufficient for a flat solution for e.g. np verb_transitive_omissible np here.
 np_before_mask = np_det_before or np_prop_before;
 np_after_mask = np_det_after or np_prop_after;
 # can optimize the following 4 steps away, combine into above
