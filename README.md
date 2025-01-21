@@ -10,26 +10,27 @@ Programs in this folder can be interpreted using Weiss et al 2021's RASP interpr
 
 **Update: There is an associated unpublished research paper which is in early stages at https://raw.githubusercontent.com/willy-b/RASP-for-ReCOGS/main/rasp-for-recogs_pos-wbruns-2024-draft.pdf .**
 
+**Copies of evaluation results notebooks and a comparison with Wu et al 2023 Transformer baselines trained from scratch are also checked in at https://github.com/willy-b/RASP-for-ReCOGS/tree/main/supplemental_data#analysis-and-evaluation-notebooks .**
+
 This section describes a RASP model under development to perform the ReCOGS_pos task (see Wu et al 2023, "ReCOGS: How Incidental Details of a Logical Form Overshadow an Evaluation of Semantic Interpretation", https://arxiv.org/abs/2303.13716 for task description) to try to prove-by-construction that a Transformer can learn it in a compositional, systematic, length generalizing way and try to understand why some errors are observed.
 
-You can run a demo and see the autoregressive output 
+You can run a demo and see the autoregressive output on the training set
 
-(or just visit https://colab.research.google.com/drive/1FS4tucZ92YR6VmhSva9pJekm2X7nnHWP?usp=sharing  )
+(or just visit e.g. https://colab.research.google.com/drive/1q-24YGWYX2zo7N50q69Y8jg5Kcb_0ph4?usp=sharing for a full dev set evaluation )
 
 ```
 git clone https://github.com/willy-b/learning-rasp.git
-python recogs_examples_in_rasp.py 
+cd learning-rasp
+python recogs_examples_in_rasp.py # runs only 5 examples on training set by default, you can run more examples or evaluate on dev/test/gen by using commandline arguments (see file)
 ```
 
-The script will show performance on Wu et al 2023 ReCOGS_pos data by default, run with "--use_dev_split", "--use_gen_split" , or "--use_test_split" to see it run on those and give a running score every row.
+The script will show performance on Wu et al 2023 ReCOGS_pos training data by default, run with "--use_dev_split", "--use_gen_split" , or "--use_test_split" to see it run on those and give a running score every row.
 
 ![](sentences_and_lfs_and_lf_graph.png)
 
-For ReCOGS, intending to perform well on Semantic Exact Match, we took a simple, flat, non-tree, non-recursive (except for decoder loop) approach which was able to get 100% on the full test set* first try (  word-level token Restricted Access Sequence Processing solution: https://github.com/willy-b/learning-rasp/blob/e97282e18b07004bf714b5c9bb5883090a2ff8e3/word-level-pos-tokens-recogs-style-decoder-loop.rasp ).
+For ReCOGS, intending to perform well on Semantic Exact Match, we took a simple, flat, non-tree, non-recursive (except for decoder loop) approach which was able to get 100% on the full test set first try: https://colab.research.google.com/drive/1N7F-nc9GVnoC_9dBVdNT02SBiBcMbgy-?usp=sharing .
 
-(* complement phrase examples were not tested in first run as that was omitted from the grammar in the first version of this project, but has been successfully added in upcoming https://github.com/willy-b/learning-rasp/pull/7 with first test run going now, see link on PR.)
-
-(String Exact Match is supported in upcoming https://github.com/willy-b/learning-rasp/pull/7 , where a semantically irrelevant reordering of v_inf_taking_to_v_inf that would pass Semantic Exact Match but not String Exact Match was updated in the RASP so that EM could be reported when https://github.com/willy-b/learning-rasp/pull/7 merges.)
+We also report String Exact Match since https://github.com/willy-b/learning-rasp/pull/7 (Semantic Exact Match is more forgiving, ignoring reorderings of the logical form that do not change the semantics).
 
 We took the RASP native sequence tokens, and first did a Transformer learned-embedding compatible operation and created 1 part-of-speech and 4 extra verb-type sequences (because each word in the COGS vocabulary may actually serve multiple POS roles; up to four different verb types as in the case of "liked" 
 
@@ -68,9 +69,8 @@ use the full details put in Lark format by ( Klinger et al 2024 , https://arxiv.
 and convert it ourselves to a format compatible with ( Zeller et al 2023, https://www.fuzzingbook.org/html/GrammarCoverageFuzzer.html ) and use their TrackingGrammarCoverageFuzzer to generate the set of all expansions of the COGS grammar. 
 
 Note that grammar coverage lets us consider after each training example what could possibly have been learned about the grammar.
-For example, we can use this to see that before we reach 75 examples of the ReCOGS training set, 100% grammar coverage has been reached (lexical differences ignored (we treat all words within a POS identically); and complement phrases omitted in the first version) ( Zeller et al 2023, https://www.fuzzingbook.org/html/GrammarCoverageFuzzer.html ) (noting that if the model is not capable of learning certain expansions in the grammar such as `np_det pp np -> np_pp -> np`, it may need to see more variations to memorize individual cases instead):
+For example, we can use this to see that by 55 examples of the ReCOGS training set (unshuffled, no augmentations) or 77 (median; 95% confidence interval, n=1000 random shuffles: 39 to 161) examples of the ReCOGS training set (shuffled, no augmentations), 100% grammar coverage is reached (lexical differences ignored) (we treat all words within a POS identically) (for description of grammer coverage see Zeller et al 2023, https://www.fuzzingbook.org/html/GrammarCoverageFuzzer.html ) (noting that if the model is not capable of learning certain expansions in the grammar such as `np_det pp np -> np_pp -> np`, as is actually true for our RASP model and we hypothesis for the Wu et al 2023 baseline Transformer it will need to see more variations to memorize individual cases instead):
 
-(update: complement phrases are included in upcoming PR https://github.com/willy-b/learning-rasp/pull/7 )
 
 ![](grammar_coverage_by_number_of_recogs_training_examples_lexical_differences_ignored.png)
 
@@ -78,7 +78,10 @@ This confirms that if one already knows parts of speech and verb types for words
 
 Thus, we can be more efficient than using the ReCOGS training set for our RASP model built by hand since we our solution uses a manual embedding via a dictionary mapping words to part-of-speech and verb-type, that ensures all words within a part of speech are treated identically (in real world learned embeddings/pretraining or a GloVe embedding would be used to solve this step; again (Tenney et al 2019, https://arxiv.org/abs/1905.05950 ) confirm BERT, a pre-trained Transformer model in wide use, has part-of-speech information available at the earliest layers.).
 
-We generated 20 sentences which cover 100\% of the COGS input grammar ( Zeller et al 2023, https://www.fuzzingbook.org/html/GrammarCoverageFuzzer.html ) excluding complement phrases (those are supported in upcoming https://github.com/willy-b/learning-rasp/pull/7 ) under those constraints (under the context free grammar, tree based assumption which turns out to be incorrect just for prepositional phrases):
+We generated 21 sentences which cover 100\% of the COGS input grammar ( Zeller et al 2023, https://www.fuzzingbook.org/html/GrammarCoverageFuzzer.html ) under those constraints (under the context free grammar, tree based assumption which turns out to be incorrect just for prepositional phrases):
+
+(note that if the prepositional phrase and complement phrase cases were added into one or two of 19 base grammar form examples only 19 total examples are actually needed, but we keep the recursive grammar parts separated for clarity here)
+
 ```
 "the girl was painted", 
 "a boy painted",
@@ -101,6 +104,7 @@ We generated 20 sentences which cover 100\% of the COGS input grammar ( Zeller e
 "the car was sold to the customer",
 
 "a boy painted the girl in a house"
+"the girl noticed that a boy painted the girl"
 ```
 
 The first 19 of those sentences are present in our RASP program code ( https://github.com/willy-b/learning-rasp/blob/
@@ -109,7 +113,7 @@ For each of these sentences we add a group of RASP operations corresponding to a
 
 Those 19 examples reflect the only rules for handling non-prepositional grammar rules. 
 
-To handle prepositional phrases in a flat solution, we find it necessary even on the training data to add a rule that ignores noun phrases preceded by a prepositonal phrase (ignore "pp np") when searching for noun indexes to report in relationships (agent, theme, recipient, etc), and we loosen verb type templates to allow a gap for any prepositional phrase to be inserted (this was not done in every possible case manually within 2 week project work period which is why we do not get 100\% in that one split, see next results section). We shall see encountering this issue in RASP and the grammar analysis suggesting a non-tree solution is learned by the Transformer appears to lead us to be able to predict 100% of a certain category of errors a baseline Wu et al 2023 ( https://arxiv.org/abs/2303.13716 ) Encoder-Decoder Transformer makes (in a paper in a class under review) present in our RASP solution before adding the rule to ignore "pp np" (based on training examples but biased to learn it generally) (the RASP model got 100% on the ReCOGS_pos test set first try, separate notebook public but not yet linked here, though you can use the python script in this folder to run that test yourself as well).
+To handle prepositional phrases in a flat solution, we find it necessary even on the training data to add a rule that ignores noun phrases preceded by a prepositonal phrase (ignore "pp np") when searching for noun indexes to report in relationships (agent, theme, recipient, etc), and we loosen verb type templates to allow a gap for any prepositional phrase to be inserted (this was not done in every possible case manually within the original 2 week project work period which is why we did not get 100% in that one split, see paper results section). We shall see encountering this issue in RASP and the grammar analysis suggesting a non-tree solution is learned by the Transformer appears to lead us to be able to predict 100% of a certain category of errors a baseline Wu et al 2023 ( https://arxiv.org/abs/2303.13716 ) Encoder-Decoder Transformer makes for most model instances (96% of errors overall) present in our RASP solution before adding the rule to ignore "pp np" (based on training examples but biased to learn it generally) (the RASP model got 100% on the ReCOGS_pos test set first try, see https://colab.research.google.com/drive/1N7F-nc9GVnoC_9dBVdNT02SBiBcMbgy-?usp=sharing , though you can use the python script in this folder to run that test yourself as well).
 
 
 Here is an example of a template for one of these sentences:
@@ -141,9 +145,9 @@ np_v_unerg = aggregate(np_after_mask and v_unerg_mask, 1);
 
 **These patterns are not causal because their use/input/output is masked to the input section of the sequence, so would take part in the Encoder of the Encoder-Decoder only**(**all operations outside the input mask in the word-level token RASP solution used in this paper are directly or indirectly causally masked** and we built symbol by symbol in a causal autoregressive way). **We could have added an explicit causal mask to each operation but for efficiency and simplicity of the code omitted it when we are doing it implicitly by taking only the last sequence position (we also acausally aggregate so that all sequence positions have the same value as the last sequence position to make it easier to read the output -- RASP interpreter will just print it as one position if they are all equal and we only take one position).**
 
-Also, the author thinks many of these RASP steps could be consolidated. The goal here was to first prove by construction that a non-recursive, flat RASP program could get approximately 100\% Semantic Exact Match on all the ReCOGS generalization splits (we only missed one split by a little due to two week time constraint, insufficient time to add all prepositional phrase handling rules).
+Also, the author thinks many of these RASP steps could be consolidated. The goal here was to first prove by construction that a non-recursive, flat RASP program could get approximately 100% Semantic Exact Match on all the ReCOGS generalization splits (we only missed one split by a little due to two week time constraint, insufficient time to add all prepositional phrase handling rules).
 
-Introduction of variables at the beginning of the ReCOGS logical form (e.g. in the logical form for "a boy painted the girl", we have "boy ( 1 ) ; * girl ( 4 ) ; painted ( 2 ) AND agent ( 2 , 1 ) AND theme ( 2 , 4 )" , the variable introduction is "boy ( 1 ) ; * girl ( 4 ) ; painted ( 2 )" before the "AND"). A more complete solution that handles not just prepositional phrase recursion (we score approximately 100\% with the solution we are describing here) but complement phrases and complement phrase recursion was omitted to fit within the 2 week project work period, but is believed by the author to be able to be easily done using the same technique (will be done in follow up work) (update: complete in https://github.com/willy-b/learning-rasp/pull/7 ). In that approach one would need to loop over the verbs and output the related relationships. Here we simplified and just sorted the input sequence with nouns before verbs and determiners, fillers last (with determiners and fillers not having any corresponding entry in the output sequence). We then count nouns and verbs in the input and count nouns and verbs in the output and determine if we have introduced all the nouns and verbs.
+Introduction of variables at the beginning of the ReCOGS logical form (e.g. in the logical form for "a boy painted the girl", we have "boy ( 1 ) ; * girl ( 4 ) ; paint ( 2 ) AND agent ( 2 , 1 ) AND theme ( 2 , 4 )" , the variable introduction is "boy ( 1 ) ; * girl ( 4 ) ; paint ( 2 )" before the "AND"). A more complete solution that handles not just prepositional phrase recursion (we score approximately 100% with the solution we are describing here). In the description here we ignore complement phrases (see code for those details) and simplify and just sort the input sequence with nouns before verbs and determiners, fillers last (with determiners and fillers not having any corresponding entry in the output sequence). We then count nouns and verbs in the input and count nouns and verbs in the output and determine if we have introduced all the nouns and verbs.
 
 Example counting how many nouns and verbs we have output (introduced as variables) so far (to determine what we need to output for next token):
 ```
@@ -193,8 +197,8 @@ As you can see above, if we have not introduced all the variables, we determine 
 If we are done introducing variables at that point in the decoder loop, we move on, 
 and attention head compatible operations recognize templates in the five parallel part-of-speech / verb-type per location sequences for "v_trans_omissible_p1", "v_trans_omissible_p2", "v_trans_omissible_pp_p1", "v_trans_omissible_pp_p2", "v_trans_not_omissible", "v_trans_not_omissible_pp_p1", "v_trans_not_omissible_pp_p2", "v_cp_taking", "v_inf_taking", "v_unacc_p1", "v_unacc_p2", "v_unacc_pp_p1", "v_unacc_pp_p2", "v_unerg", "v_dat_p2", "v_dat_pp_p1", "v_dat_pp_p2",  "v_dat_pp_p3",  "v_dat_pp_p4".
 
-Here are a couple of examples of patterns, to see how it looks if we support 1 verb pattern per input (no complement phrase recursion; which can be easily handled how we handle other things we loop over, looping over current phrase and masking and processing), which is sufficient to get approximately 100\% on all entries that do not use complement phrases (e.g. "so-and-so noticed that (full input here)"):
-(update: complement phrases are supported in upcoming PR https://github.com/willy-b/learning-rasp/pull/7 )
+Here are a couple of examples of patterns, to see how it looks if we support 1 verb pattern per input (no complement phrase recursion; which can be easily handled how we handle other things we loop over, looping over current phrase and masking and processing, see actual code for details), which is sufficient to get approximately 100\% on all entries that do not use complement phrases (e.g. "so-and-so noticed that (full input here)"):
+(update: complement phrases are supported in the .rasp file)
 
 ```
 # define the pattern
@@ -272,7 +276,7 @@ def template_size(template_name) {
 
 Details are in the code, but we compute at the last sequence position (in parallel) the number of relationships output for the verb so far, and for the current relationship which token within that multi-token process (e.g. the word "agent" or the open parenthesis "(" or the left index, or the comma, or right index, close parenthesis ")", "AND", etc) we are on.
 
-Like we computed at the last sequence position the number of nouns and verbs in the output once we are finished introducing nouns and verbs (this would be a little different with complement phrases, see https://github.com/willy-b/learning-rasp/pull/7 where CP are supported), we compute the number of agent,theme,recipient,xcomp,ccomp entries in the output:
+Like we computed at the last sequence position the number of nouns and verbs in the output once we are finished introducing nouns and verbs (this is a little different in the actual code with complement phrases, see the actual .rasp file code for details), we compute the number of agent,theme,recipient,xcomp,ccomp entries in the output:
 
 ```
 atrxc_in_output_sequence = OUTPUT_MASK*(indicator(tokens == "agent" 
@@ -419,11 +423,12 @@ after_intro_num_tokens_in_output_excluding_asterisks - template_size(template_na
 
 See code for full details. For all steps only the RASP outputs aligned with the input sequence (Encoder part of derived Transformer) or the very last sequence output (for next token in autoregressive generation) were used. For convenience of reading the aggregate operator was usually used acausally to assign all sequence outputs before the last one to the same value as the last (so only one value would be displayed).
 
-You can run a demo and see the autoregressive output 
+You can run a demo and see the autoregressive output on the training set
 
-(or just visit https://colab.research.google.com/drive/1FS4tucZ92YR6VmhSva9pJekm2X7nnHWP?usp=sharing  )
+(or just visit e.g. https://colab.research.google.com/drive/1q-24YGWYX2zo7N50q69Y8jg5Kcb_0ph4?usp=sharing for a full dev set evaluation )
 
 ```
 git clone https://github.com/willy-b/learning-rasp.git
-python recogs_examples_in_rasp.py
+cd learning-rasp
+python recogs_examples_in_rasp.py # runs only 5 examples on training set by default, you can run more examples or evaluate on dev/test/gen by using commandline arguments (see file)
 ```
