@@ -6,6 +6,8 @@ Sharing some of the RASP-for-ReCOGS_pos project as well here (mostly in private 
 
 Programs in this folder can be interpreted using Weiss et al 2021's RASP interpreter at https://github.com/tech-srl/RASP .
 
+Please cite this repository and/or the associated paper-in-progress at https://raw.githubusercontent.com/willy-b/RASP-for-ReCOGS/main/rasp-for-recogs_pos-wbruns-2024-draft.pdf if you use anything from here or find it helpful!
+
 ## RASP-for-ReCOGS_pos ( recogs_examples_in_rasp.py and word-level-pos-tokens-recogs-style-decoder-loop.rasp )
 
 **Update: There is an associated unpublished research paper which is in early stages at https://raw.githubusercontent.com/willy-b/RASP-for-ReCOGS/main/rasp-for-recogs_pos-wbruns-2024-draft.pdf .**
@@ -26,7 +28,10 @@ python recogs_examples_in_rasp.py # runs only 5 examples on training set by defa
 
 The script will show performance on Wu et al 2023 ReCOGS_pos training data by default, run with "--use_dev_split", "--use_gen_split" , or "--use_test_split" to see it run on those and give a running score every row.
 
-![](sentences_and_lfs_and_lf_graph.png)
+![](expanded_version_of_sentences_and_lfs_and_lf_graph_figure.png)
+
+Figure 1 from ![paper-in-progress](https://raw.githubusercontent.com/willy-b/RASP-for-ReCOGS/main/rasp-for-recogs_pos-wbruns-2024-draft.pdf) (vector graphics used in paper, raster above).
+The task we solve is to extract the meaning (c) written in format (iii) of sentences (i). Full description of Figure (in higher quality vector graphics as well) is in the paper.
 
 For ReCOGS, intending to perform well on Semantic Exact Match, we took a simple, flat, non-tree, non-recursive (except for decoder loop) approach which was able to get 100% on the full test set first try: https://colab.research.google.com/drive/1N7F-nc9GVnoC_9dBVdNT02SBiBcMbgy-?usp=sharing .
 
@@ -142,6 +147,18 @@ v_unerg_mask = select(16, pos_tokens_vmap1, ==) and
 select(indices, indices, ==);
 np_v_unerg = aggregate(np_after_mask and v_unerg_mask, 1);
 ```
+
+Example RASP model flat grammar pattern matching case (np v_dat_p2 np np):
+
+![](./example_rasp_for_recogs_flat_pattern_match.png)
+
+Example RASP model flat grammar pattern matching case despite pp modification of middle recipient noun (np v_dat_p2 np np):
+
+![](./example_rasp_for_recogs_flat_pattern_match_with_pp_modification.png)
+
+Example RASP model same flat grammar pattern non-matching case:
+
+![](./example_rasp_for_recogs_flat_pattern_no_match.png)
 
 **These patterns are not causal because their use/input/output is masked to the input section of the sequence, so would take part in the Encoder of the Encoder-Decoder only**(**all operations outside the input mask in the word-level token RASP solution used in this paper are directly or indirectly causally masked** and we built symbol by symbol in a causal autoregressive way). **We could have added an explicit causal mask to each operation but for efficiency and simplicity of the code omitted it when we are doing it implicitly by taking only the last sequence position (we also acausally aggregate so that all sequence positions have the same value as the last sequence position to make it easier to read the output -- RASP interpreter will just print it as one position if they are all equal and we only take one position).**
 
