@@ -271,7 +271,6 @@ output = post_nv_introduction_output if (num_close_paren_in_output >= num_nps_an
 
 # Let's run the decoder loop!
 # **This should be able to transform "the boy painted a girl" into a ReCOGS-like form "boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) theme ( 3 , 2 )"**:
-# See https://github.com/willy-b/learning-rasp/pull/1/files#r1803900183 for a discussion of the plan to expand this to support translating the full COGS and hopefully ReCOGS grammars.
 # We print output, but manually append to the example and repeat to run the decoder loop:
 # (You can check that prediction at each step is what is actually supplied the next step.)
 set example "nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . "
