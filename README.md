@@ -16,7 +16,7 @@ This section describes a RASP model under development to perform the ReCOGS_pos 
 
 You can run a demo and see the autoregressive output on the training set
 
-(or just visit e.g. https://colab.research.google.com/drive/1q-24YGWYX2zo7N50q69Y8jg5Kcb_0ph4?usp=sharing for a full dev set evaluation )
+(or just visit e.g. REDACTED for a full dev set evaluation )
 
 ```
 git clone https://github.com/willy-b/learning-rasp.git
@@ -31,7 +31,7 @@ The script will show performance on Wu et al 2023 ReCOGS_pos training data by de
 Figure 1 from ![paper-in-progress](https://raw.githubusercontent.com/willy-b/RASP-for-ReCOGS/main/rasp-for-recogs_pos-wbruns-2024-draft.pdf) (vector graphics used in paper, raster above).
 The task we solve is to extract the meaning (c) written in format (iii) of sentences (i). Full description of Figure (in higher quality vector graphics as well) is in the paper.
 
-For ReCOGS, intending to perform well on Semantic Exact Match, we took a simple, flat, non-tree, non-recursive (except for decoder loop) approach which was able to get 100% on the full test set first try: https://colab.research.google.com/drive/1N7F-nc9GVnoC_9dBVdNT02SBiBcMbgy-?usp=sharing .
+For ReCOGS, intending to perform well on Semantic Exact Match, we took a simple, flat, non-tree, non-recursive (except for decoder loop) approach which was able to get 100% on the full test set first try: REDACTED .
 
 We also report String Exact Match since https://github.com/willy-b/learning-rasp/pull/7 (Semantic Exact Match is more forgiving, ignoring reorderings of the logical form that do not change the semantics).
 
@@ -213,7 +213,7 @@ For each of these sentences we add a group of RASP operations corresponding to a
 
 Those 19 examples reflect the only rules for handling non-prepositional grammar rules. 
 
-To handle prepositional phrases in a flat solution, we find it necessary even on the training data to add a rule that ignores noun phrases preceded by a prepositonal phrase (ignore "pp np") when searching for noun indexes to report in relationships (agent, theme, recipient, etc), and we loosen verb type templates to allow a gap for any prepositional phrase to be inserted (this was not done in every possible case manually within the original 2 week project work period which is why we did not get 100% in that one split, see paper results section). We shall see encountering this issue in RASP and the grammar analysis suggesting a non-tree solution is learned by the Transformer appears to lead us to be able to predict 100% of a certain category of errors a baseline Wu et al 2023 ( https://arxiv.org/abs/2303.13716 ) Encoder-Decoder Transformer makes for most model instances (96% of errors overall) present in our RASP solution before adding the rule to ignore "pp np" (based on training examples but biased to learn it generally) (the RASP model got 100% on the ReCOGS_pos test set first try, see https://colab.research.google.com/drive/1N7F-nc9GVnoC_9dBVdNT02SBiBcMbgy-?usp=sharing , though you can use the python script in this folder to run that test yourself as well).
+To handle prepositional phrases in a flat solution, we find it necessary even on the training data to add a rule that ignores noun phrases preceded by a prepositonal phrase (ignore "pp np") when searching for noun indexes to report in relationships (agent, theme, recipient, etc), and we loosen verb type templates to allow a gap for any prepositional phrase to be inserted (this was not done in every possible case manually within the original 2 week project work period which is why we did not get 100% in that one split, see paper results section). We shall see encountering this issue in RASP and the grammar analysis suggesting a non-tree solution is learned by the Transformer appears to lead us to be able to predict 100% of a certain category of errors a baseline Wu et al 2023 ( https://arxiv.org/abs/2303.13716 ) Encoder-Decoder Transformer makes for most model instances (96% of errors overall) present in our RASP solution before adding the rule to ignore "pp np" (based on training examples but biased to learn it generally) (the RASP model got 100% on the ReCOGS_pos test set first try, see REDACTED , though you can use the python script in this folder to run that test yourself as well).
 
 
 Here is an example of a template for one of these sentences:
@@ -644,7 +644,7 @@ See code for full details (for simplicity this description was also written with
 
 You can run a demo and see the autoregressive output on the training set
 
-(or just visit e.g. https://colab.research.google.com/drive/1q-24YGWYX2zo7N50q69Y8jg5Kcb_0ph4?usp=sharing for a full dev set evaluation )
+(or just visit e.g. REDACTED for a full dev set evaluation )
 
 ```
 git clone https://github.com/willy-b/learning-rasp.git
