@@ -654,4 +654,4 @@ python recogs_examples_in_rasp.py # runs only 5 examples on training set by defa
 
 ## RASP-for-COGS
 
-**NEW** The original, harder COGS task is now also solved in RASP in a separate project, see https://github.com/willy-b/RASP-for-COGS !
+**NEW** The original, harder COGS task is now also solved in RASP in a separate project, see https://anonymous.4open.science/r/RASP-for-COGS-102F/ !
