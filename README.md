@@ -366,144 +366,115 @@ Outputting the verb relationships we must skip over any "pp np" as possible agen
 ```
 pp_sequence = indicator(pos_tokens == 2);
 pp_one_after_mask = select(pp_sequence, 1, ==) and \
-select(indices+1, indices, ==);
+  select(indices+1, indices, ==);
 pp_one_after_sequence = aggregate(pp_one_after_mask, 1);
 pp_one_after_mask = select(pp_one_after_sequence, 1, ==) and \
-select(indices, indices, ==);
+  select(indices, indices, ==);
+
 pp_two_after_mask = select(pp_sequence, 1, ==) and \
-select(indices+2, indices, ==);
+  select(indices+2, indices, ==);
 pp_two_after_sequence = aggregate(pp_two_after_mask, 1);
 pp_two_after_mask = select(pp_two_after_sequence, 1, ==) and \
-select(indices, indices, ==);
+  select(indices, indices, ==);
+
 np_det_diag_mask = select(aggregate(np_det_mask, 1), 1, ==) and \
-select(indices, indices, ==);
+  select(indices, indices, ==);
 np_prop_diag_mask = select(aggregate(np_prop_mask, 1), 1, ==) and \
-select(indices, indices, ==);
-right_idx = \
-aggregate(select(nps_without_pp_prefix_indices, 1, ==), indices) \
-if (template_name == "v_inf_taking" and after_intro_idx == 4) else right_idx;
-# we have computed left_idx and right_idx
-# for verb relationships, like "agent ( [left_idx] , [right_idx] )"
-# ...
-# note, the offset since the last separator in the output,
-# instead of a modulus, could have been used here
-# see actual RASP file in GitHub for computation
-# relationship ( idx , idx ) AND
-#
- 0
- 1 2 3 4 5 6
-after_intro_target_token = "";
-# "agent", "theme", "recipient", etc
-# depending on relationship index and flat-matched template (in Encoder)
-template_mapping_output = \
-get_template_mapping(template_name, after_intro_idx);
-# see code in Github for definition of
-# after_intro_num_tokens_in_output_excluding_asterisks
-# and use of an offset that depends on v_inf or not
-# out of scope for this simplified example
-after_intro_target_token = template_mapping_output \
-if ((after_intro_num_tokens_in_output_excluding_asterisks) % 7 == 0) \
-else after_intro_target_token;
-after_intro_target_token = "(" \
-if ((after_intro_num_tokens_in_output_excluding_asterisks) % 7 == 1) \
-else after_intro_target_token;
-after_intro_target_token = left_idx \
-if (after_intro_num_tokens_in_output_excluding_asterisks % 7 == 2) \
-else after_intro_target_token;
-after_intro_target_token = "," \
-if (after_intro_num_tokens_in_output_excluding_asterisks % 7 == 3) \
-else after_intro_target_token;
-after_intro_target_token = right_idx \
-if (after_intro_num_tokens_in_output_excluding_asterisks % 7 == 4) \
-else after_intro_target_token;
-after_intro_target_token = ")" \
-if (after_intro_num_tokens_in_output_excluding_asterisks % 7 == 5) \
-else after_intro_target_token;
-after_intro_target_token = "AND" \
-if \
-(after_intro_num_tokens_in_output_excluding_asterisks % 7 == 6 \
-and \
-not (template_mapping_output == "")) \
-else after_intro_target_token;
-# ...
-# the next token predicted ("output") is
-# overridden with after_intro_target_token
-# ONLY if the decoder detects that verb relationships
-# are the appropriate output phase
-# by counting how many nouns/verbs/relationships are already in the output
+  select(indices, indices, ==);
+
 no_pp_np_mask = \
 1 - aggregate((pp_one_after_mask and np_prop_diag_mask) or \
 (pp_two_after_mask and np_det_diag_mask), 1);
+
 # here we compute left_idx and right_idx
 # for verb relationships, like "agent ( [left_idx] , [right_idx] )"
+
 # one-based index
 nps_without_pp_prefix_indices = \
 selector_width(select(NOUN_MASK*no_pp_np_mask, 1, ==) and \
 select(indices, indices, <=))*NOUN_MASK*no_pp_np_mask;
+
 # the one verb (except v_inf_taking cases)
 left_idx_in_nvs_zero_based = nv_in_input_count-1;
 # (after sentential complements, not covered in this example, see actual code via link above)
 # need to also subtract the index in ReCOGS for the 2nd verb if it is v_inf_taking
 left_idx_in_nvs_zero_based = (left_idx_in_nvs_zero_based-1) \
-if (template_name == "v_inf_taking" and after_intro_idx <= 2) else left_idx_in_nvs_zero_based;
+  if (template_name == "v_inf_taking" and after_intro_idx <= 2) else left_idx_in_nvs_zero_based;
 left_idx = aggregate(select(indices, left_idx_in_nvs_zero_based, ==), input_indices_sorted);
+
 # avoids attractor nouns
 right_idx = aggregate(select(nps_without_pp_prefix_indices, after_intro_idx, ==), indices);
+
 # points to 2nd verb for xcomp for v_inf_taking_v_inf
 # note, this simplified example ignores sentential complement (CP) handling
 # (ideally this would be verb specific,
-# we simplify here to reuse variables available in this example)
+#  we simplify here to reuse variables available in this example)
 right_idx = aggregate(select(indices, nv_in_output_count, ==), input_indices_sorted) \
-if (template_name == "v_inf_taking" and after_intro_idx == 2) else right_idx;
+   if (template_name == "v_inf_taking" and after_intro_idx == 2) else right_idx;
+
 # points to 1st noun for 2nd v_inf agent in v_inf_taking_v_inf
 right_idx = \
-aggregate(select(nps_without_pp_prefix_indices, 1, ==), indices) \
-if (template_name == "v_inf_taking" and after_intro_idx == 4) else right_idx;
+  aggregate(select(nps_without_pp_prefix_indices, 1, ==), indices) \
+  if (template_name == "v_inf_taking" and after_intro_idx == 4) else right_idx;
+
 # we have computed left_idx and right_idx
 # for verb relationships, like "agent ( [left_idx] , [right_idx] )"
+
 # ...
+
 # note, the offset since the last separator in the output,
 # instead of a modulus, could have been used here
 # see actual RASP file in GitHub for computation
+
 # relationship ( idx , idx ) AND
-#            0 1   2 3   4 5   6
+#      0       1  2  3  4  5  6
 after_intro_target_token = "";
-# "agent", "theme", "recipient", etc
+
+# "agent", "theme", "recipient", etc 
 # depending on relationship index and flat-matched template (in Encoder)
 template_mapping_output = \
-get_template_mapping(template_name, after_intro_idx);
-# see code in Github for definition of
+  get_template_mapping(template_name, after_intro_idx);
+
+# see code in Github for definition of 
 # after_intro_num_tokens_in_output_excluding_asterisks
 # and use of an offset that depends on v_inf or not
 # out of scope for this simplified example
 after_intro_target_token = template_mapping_output \
-if ((after_intro_num_tokens_in_output_excluding_asterisks) % 7 == 0) \
-else after_intro_target_token;
+  if ((after_intro_num_tokens_in_output_excluding_asterisks) % 7 == 0) \
+  else after_intro_target_token;
+
 after_intro_target_token = "(" \
-if ((after_intro_num_tokens_in_output_excluding_asterisks) % 7 == 1) \
-else after_intro_target_token;
+  if ((after_intro_num_tokens_in_output_excluding_asterisks) % 7 == 1) \
+  else after_intro_target_token;
+
 after_intro_target_token = left_idx \
 if (after_intro_num_tokens_in_output_excluding_asterisks % 7 == 2) \
 else after_intro_target_token;
+
 after_intro_target_token = "," \
 if (after_intro_num_tokens_in_output_excluding_asterisks % 7 == 3) \
 else after_intro_target_token;
+
 after_intro_target_token = right_idx \
 if (after_intro_num_tokens_in_output_excluding_asterisks % 7 == 4) \
 else after_intro_target_token;
+
 after_intro_target_token = ")" \
 if (after_intro_num_tokens_in_output_excluding_asterisks % 7 == 5) \
 else after_intro_target_token;
+
 after_intro_target_token = "AND" \
 if \
 (after_intro_num_tokens_in_output_excluding_asterisks % 7 == 6 \
 and \
 not (template_mapping_output == "")) \
 else after_intro_target_token;
+
 # ...
+
 # the next token predicted ("output") is
 # overridden with after_intro_target_token
-# ONLY if the decoder detects that verb relationships
+# ONLY if the decoder detects that verb relationships 
 # are the appropriate output phase
 # by counting how many nouns/verbs/relationships are already in the output
 ```
