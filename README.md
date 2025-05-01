@@ -168,6 +168,45 @@ which correspond to the following grammar patterns respectively
   v_trans_omissible_p2 ((det common)|proper)
 ```
 
+Corresponding training examples can also be associated to show these are within the training data (we show just 1 match for each):
+
+(Note that our RASP model collapses "a" and "the" to "det" (coded as 1) so we do as well here.)
+
+**RASP-for-ReCOGS grammar pattern example** | **Actual part-of-speech/verb-type sequence used in RASP model** | **COGS/ReCOGS input training example**
+-------------------- | ------------------------------------------------- | -----------------------
+the girl was painted | det common\_noun was v\_trans\_omissible\_pp\_p1  | The donut was studied . 
+a boy painted | det common\_noun v\_trans\_omissible\_p1  | The captain ate . 
+a boy painted the girl | det common\_noun v\_trans\_omissible\_p2 det common\_noun  | The sailor dusted a boy . 
+the girl was painted by a boy | det common\_noun was v\_trans\_omissible\_pp\_p2 by det common\_noun  | A drink was eaten by a child . 
+a boy respected the girl | det common\_noun v\_trans\_not\_omissible det common\_noun  | A girl liked the raisin . 
+the girl was respected | det common\_noun was v\_trans\_not\_omissible\_pp\_p1  | The pen was helped . 
+the girl was respected by a boy | det common\_noun was v\_trans\_not\_omissible\_pp\_p2 by det common\_noun  | A rose was helped by a dog . 
+the boy grew the flower | det common\_noun v\_unacc\_p1 det common\_noun  | A cat disintegrated a girl . 
+the flower was grown | det common\_noun was v\_unacc\_pp\_p1  | A box was inflated . 
+the flower was grown by a boy | det common\_noun was v\_unacc\_pp\_p2 by det common\_noun  | The cake was frozen by the giraffe . 
+the scientist wanted to read | det common\_noun v\_inf\_taking to v\_inf  | The girl needed to cook . 
+the guest smiled | det common\_noun v\_unerg  | The sailor laughed . 
+the flower grew | det common\_noun v\_unacc\_p2  | A cake rolled . 
+ella sold a car to the customer | proper\_noun v\_dat\_p1 det common\_noun to det common\_noun  | Emma passed a cake to the girl . 
+ella sold a customer a car | proper\_noun v\_dat\_p2 det common\_noun det common\_noun  | Liam forwarded the girl the donut . 
+the customer was sold a car | det common\_noun was v\_dat\_pp\_p3 det common\_noun  | A girl was sold the cake . 
+the customer was sold a car by ella | det common\_noun was v\_dat\_pp\_p4 det common\_noun by proper\_noun  | The girl was lended the balloon by Harper . 
+the car was sold to the customer by ella | det common\_noun was v\_dat\_pp\_p2 to det common\_noun by proper\_noun  | The pen was offered to the girl by Emma . 
+the car was sold to the customer | det common\_noun was v\_dat\_pp\_p1 to det common\_noun  | The melon was lended to a girl . 
+**Prepositional phrase and sentential complement examples mentioned in paper** | **part-of-speech/verb-type sequence (used example for development)** | **COGS/ReCOGS input training example**
+a boy painted the girl in a house | det common\_noun v\_trans\_omissible\_p2 det common\_noun pp det common\_noun | A frog ate a sweetcorn in a pile . 
+the girl noticed that a boy painted the girl | det common\_noun v\_cp\_taking that det common\_noun v\_trans\_omissible\_p2 det common\_noun | A girl said that a crocodile ate the rose . 
+
+(All but the last example are from the first 119 training examples. Ignoring lexical differences, full coverage of the grammar
+occurs by training example 55 in the PCFG sense (see "Appendix: Computing Grammar Coverage" (9.10)) when read in order
+but the specific sentences we used (one of multiple ways to cover the grammar) occur by example 119 in the order given in the
+train.tsv file, except for the specific sentential complement example we gave by modifying one of our existing examples with a
+sentential complement ("the girl noticed that a boy painted the girl") which does not have an exactly matching counterpart until
+the 4,186th example (other equivalent-for-these-purposes sentential complement examples are demonstrated earlier, e.g. within
+55 examples in default ordering). Note the prepositional phrase and sentential complement examples are not actually pattern
+matched (the 19 pattern matches plus a general cp/pp rule are used) and so do not exist in the RASP code, but are just given for
+reference.)
+
 The first 19 of those sentences are present in our RASP program code ( https://github.com/willy-b/learning-rasp/blob/
 dca0bc6689b0454b75e5a46e77ffe66566ca7661/word-level-pos-tokens-recogs-style-decoder-loop.rasp\#L568 ) as canonical examples of verb type templates.
 For each of these sentences we add a group of RASP operations corresponding to attention operations in a Transformer to match a template corresponding to that sentence type. 
