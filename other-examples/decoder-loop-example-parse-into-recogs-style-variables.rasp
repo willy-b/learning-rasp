@@ -1,5 +1,5 @@
 # THIS SINGLE TEMPLATE CHARACTER LEVEL EXAMPLE WAS JUST A STARTING POINT,
-# SEE word-level-pos-tokens-recogs-style-decoder-loop.rasp FOR SUPPORT OF MULTIPLE TEMPLATES COVERING MOST OF THE GRAMMAR.
+# SEE word-level-pos-tokens-recogs-style-decoder-loop.rasp FOR SUPPORT OF MULTIPLE TEMPLATES COVERING ALL OF THE GRAMMAR.
 # This is also not enforcing causal masks, though that can be done reading out the pooled word values only at separators or the end of words.
 # Again, see word-level-pos-tokens-recogs-style-decoder-loop.rasp for a more complete solution, which is also Encoder-Decoder compatible, it only allows encoder style bidirectional aggregation in the input part of the sequence, and causal aggregation over output sequence part of input for single-next-token prediction at last position (decoder loop).
 
@@ -487,4 +487,5 @@ output;
 # Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) theme ( 3 , 2 ") = [)]*223 (strings)
 # Example: output("nouns: girl boy cat dog box drink emma liam . verbs: ate painted drew loved . det: the a . ignore: , ( 1 2 3 ) ; . agent theme . the boy painted a girl . boy ( 1 ) ; girl ( 2 ) ; painted ( 3 ) agent ( 3 , 1 ) theme ( 3 , 2 )") = [ ]*224 (strings)
 
-# See https://github.com/willy-b/learning-rasp/pull/1/files#r1803900183 for a discussion of the plan to expand this to support translating the full COGS and hopefully ReCOGS grammars.
+# THIS SINGLE TEMPLATE CHARACTER LEVEL EXAMPLE WAS JUST A STARTING POINT,
+# SEE word-level-pos-tokens-recogs-style-decoder-loop.rasp FOR SUPPORT OF MULTIPLE TEMPLATES COVERING ALL OF THE GRAMMAR.
