@@ -112,8 +112,60 @@ We generated 21 sentences which cover 100\% of the COGS input grammar ( Zeller e
 "the car was sold to the customer by ella",
 "the car was sold to the customer",
 
+# 2 examples for recursive grammar rules
+# 1 prepositional phrase example
 "a boy painted the girl in a house"
+# 1 sentential complement example
 "the girl noticed that a boy painted the girl"
+```
+
+which correspond to the following grammar patterns respectively
+
+```
+((det common)|proper) was v_trans_omissible_pp_p1
+((det common)|proper) v_trans_omissible_p1
+((det common)|proper) v_trans_omissible_p2 
+  ((det common)|proper)
+((det common)|proper) was v_trans_omissible_pp_p2 
+  by ((det common)|proper)
+((det common)|proper) v_trans_not_omissible 
+  ((det common)|proper)
+((det common)|proper) was v_trans_not_omissible_pp_p1
+((det common)|proper) was v_trans_not_omissible_pp_p2 
+  by ((det common)|proper)
+((det common)|proper) v_unacc_p1 
+  ((det common)|proper)
+((det common)|proper) was v_unacc_pp_p1
+((det common)|proper) was v_unacc_pp_p2
+  by ((det common)|proper)
+((det common)|proper) v_inf_taking to v_inf
+((det common)|proper) v_unerg
+((det common)|proper) v_unacc_p2
+((det common)|proper) v_dat_p1 
+  ((det common)|proper) to ((det common)|proper)
+((det common)|proper) v_dat_p2 
+  ((det common)|proper) ((det common)|proper)
+((det common)|proper) was v_dat_pp_p3
+  ((det common)|proper)
+((det common)|proper) was v_dat_pp_p4
+  ((det common)|proper) 
+  by ((det common)|proper)
+((det common)|proper) was v_dat_pp_p2 
+  to ((det common)|proper) by ((det common)|proper)
+((det common)|proper) was v_dat_pp_p1
+  to ((det common)|proper)
+# 2 examples for recursive grammar rules
+# 1 prepositional phrase example
+# (flat rule: mask out "pp ((det common)|proper)" 
+#             except when outputting noun and nmod)
+((det common)|proper) v_trans_omissible_p2 
+  ((det common)|proper) pp ((det common)|proper)
+# 1 sentential complement example
+# (flat rule: mask out cp prefix except 
+#  when outputting that part of LF)
+((det common)|proper) v_cp_taking that 
+  ((det common)|proper) 
+  v_trans_omissible_p2 ((det common)|proper)
 ```
 
 The first 19 of those sentences are present in our RASP program code ( https://github.com/willy-b/learning-rasp/blob/
