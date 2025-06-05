@@ -1,18 +1,18 @@
 Solving little problems in Restricted Access Sequence Processing (RASP), a language designed to help one in "Thinking Like Transformers" (title of Weiss et al 2021 paper, https://arxiv.org/abs/2106.06981 ,  which introduced it). 
 
-Used RASP for a final project in Stanford XCS224U class this year to solve ReCOGS_pos ( https://digitalcredential.stanford.edu/check/24288227F20DD8486799B5FF5E8C04CB440129EC0DE44FEB65C4BAFABDBAA68BQWtzR2p1TG45dHowNWg5dXp6UW1kNmdYVVExekNJa1V3R2J5aFdhWi9Lb01MakFZ ) so was trying to keep myself accountable by working through problems in a repo along the way. 
+Used RASP for what was originally a final project in Stanford XCS224U class in 2024 to solve ReCOGS_pos ( https://digitalcredential.stanford.edu/check/24288227F20DD8486799B5FF5E8C04CB440129EC0DE44FEB65C4BAFABDBAA68BQWtzR2p1TG45dHowNWg5dXp6UW1kNmdYVVExekNJa1V3R2J5aFdhWi9Lb01MakFZ ) so was trying to keep myself accountable by working through problems in a repo along the way. After the course, this grew into a paper at https://arxiv.org/abs/2504.15349 ( https://github.com/willy-b/RASP-for-ReCOGS ) and also a separate solution of the harder original COGS dataset at https://github.com/willy-b/RASP-for-COGS .
 
 Programs in this folder can be interpreted using Weiss et al 2021's RASP interpreter at https://github.com/tech-srl/RASP .
 
-Please cite this repository and/or the associated paper-in-progress at https://raw.githubusercontent.com/willy-b/RASP-for-ReCOGS/main/rasp-for-recogs_pos-wbruns-2024-draft.pdf if you use anything from here or find it helpful!
+Please cite this repository and/or the associated paper at https://arxiv.org/abs/2504.15349 (also https://github.com/willy-b/RASP-for-ReCOGS ) if you use anything from here or find it helpful!
 
 ## RASP-for-ReCOGS_pos ( recogs_examples_in_rasp.py and word-level-pos-tokens-recogs-style-decoder-loop.rasp )
 
-**Update: There is an associated unpublished research paper which is in early stages at https://raw.githubusercontent.com/willy-b/RASP-for-ReCOGS/main/rasp-for-recogs_pos-wbruns-2024-draft.pdf .**
+**Update: There is an associated research paper at https://arxiv.org/abs/2504.15349 .**
 
 **Copies of evaluation results notebooks and a comparison with Wu et al 2023 Transformer baselines trained from scratch are also checked in at https://github.com/willy-b/RASP-for-ReCOGS/tree/main/supplemental_data#analysis-and-evaluation-notebooks .**
 
-This section describes a RASP model under development to perform the ReCOGS_pos task (see Wu et al 2023, "ReCOGS: How Incidental Details of a Logical Form Overshadow an Evaluation of Semantic Interpretation", https://arxiv.org/abs/2303.13716 for task description) to try to prove-by-construction that a Transformer can learn it in a compositional, systematic, length generalizing way and try to understand why some errors are observed.
+This section describes a RASP model to perform the ReCOGS_pos task (see Wu et al 2023, "ReCOGS: How Incidental Details of a Logical Form Overshadow an Evaluation of Semantic Interpretation", https://arxiv.org/abs/2303.13716 for task description) to try to prove-by-construction that a Transformer can learn it in a compositional, systematic, length generalizing way and try to understand why some errors are observed.
 
 You can run a demo and see the autoregressive output on the training set
 
@@ -28,8 +28,8 @@ The script will show performance on Wu et al 2023 ReCOGS_pos training data by de
 
 ![](expanded_version_of_sentences_and_lfs_and_lf_graph_figure.png)
 
-Figure 1 from ![paper-in-progress](https://raw.githubusercontent.com/willy-b/RASP-for-ReCOGS/main/rasp-for-recogs_pos-wbruns-2024-draft.pdf) (vector graphics used in paper, raster above).
-The task we solve is to extract the meaning (c) written in format (iii) of sentences (i). Full description of Figure (in higher quality vector graphics as well) is in the paper.
+Figure 1 from ![the paper](https://arxiv.org/abs/2504.15349) (vector graphics used in paper, raster above).
+The task we solve is to extract the meaning (c) written in format (iii) of sentences (i). Full description of Figure (in higher quality vector graphics as well) is in the paper. (Note, as a convention, we draw the arrow from the agent to the verb in the semantic graphs like (c) so that they layout nicely.)
 
 For ReCOGS, intending to perform well on Semantic Exact Match, we took a simple, flat, non-tree, non-recursive approach (we do NOT implement any tree/recursive combination rules across sequence positions like `np_det pp np -> np_pp -> np`) which was able to get 100% on the full test set first try: https://colab.research.google.com/drive/1N7F-nc9GVnoC_9dBVdNT02SBiBcMbgy-?usp=sharing .
 
