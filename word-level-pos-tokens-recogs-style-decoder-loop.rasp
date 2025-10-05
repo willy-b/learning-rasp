@@ -2,19 +2,36 @@
 
 # Note, it is simpler and more performant to just train the Transformer on examples!
 # This is an academic exercise, writing a neural network compatible program by hand in the Restricted Access Sequence Processing (compilable to Transformer) language (Weiss et al 2021, https://arxiv.org/abs/2106.06981 )
-# to prove a Transformer can perform a particular type of solution (we will be building a grammar based and compositional solution).
-# (See the draft paper at https://raw.githubusercontent.com/willy-b/RASP-for-ReCOGS/main/rasp-for-recogs_pos-wbruns-2024-draft.pdf .)
+# to prove a Transformer can perform a particular type of solution (we will be building a compositional and length generalizing solution).
+# (See the draft paper at https://raw.githubusercontent.com/willy-b/RASP-for-ReCOGS/main/rasp-for-recogs_pos-wbruns-2024-draft.pdf 
+# and also the even better solution developed in 2025 for the base COGS dataset at https://github.com/willy-b/RASP-for-COGS ).
 
 # See recogs_examples_in_rasp.py for a way to run this. Alteratively use the RASP interpreter REPL to run it line by line and see the output.
 
 # Given the "COGS: A Compositional Generalization Challenge Based on Semantic Interpretation"
 # (Kim and Linzen 2020, https://aclanthology.org/2020.emnlp-main.731 )
-# English input sentence grammar,
+# English input sentence grammar (this code does not actually implement the grammar but uses 19 flat pattern matches that cover the non-recursive aspects of this grammar),
 
-# ( Vocab and grammar for COGS can be used as described in IBM's CPG project (their utilities, not their CPG itself) at https://github.com/IBM/cpg/blob/c3626b4e03bfc681be2c2a5b23da0b48abe6f570/src/model/cogs_data.py#L523 )
+# ( Vocab and input grammar for COGS, facts of the dataset, are usefully described in IBM's CPG project (their utilities, not their CPG itself) at https://github.com/IBM/cpg/blob/c3626b4e03bfc681be2c2a5b23da0b48abe6f570/src/model/cogs_data.py#L523 )
 
-# and the verb normalization map (fact of the dataset) for the verbs before they go into the outputted logical forms:
+# We will also make reference to their verb normalization map (fact of the dataset) for the verbs before they go into the outputted logical forms, to write up the following.
 # (as grammar above, used IBM's description of the COGS data in the utilities for their CPG project which I am NOT using otherwise: https://github.com/IBM/cpg/blob/c3626b4e03bfc681be2c2a5b23da0b48abe6f570/src/model/cogs_data.py#L485 )
+# Note we followed the (Klinger et al., 2024) description
+# of COGS and include in our RASP-for-ReCOGS vocabulary
+# (part-of-speech or verb-type embedding/mapping) all words
+# occurring anywhere in the upstream (Re)COGS "train.tsv".
+# For RASP-for-ReCOGS only, we also include two words in
+# our vocab/embedding as common nouns accidentally left
+# out of train.tsv vocabulary by the COGS author (COGS
+# vocab is used by ReCOGS): "monastery" and "gardner"
+# (only included in their train_100.tsv and dev.tsv not also
+# in train.tsv, but present in test/gen), a decision affecting
+# just 22 or 0.1% of generalization examples so would not
+# affect any conclusions qualitatively. For RASP-for-COGS ( https://github.com/willy-b/RASP-for-COGS )
+# which was started after RASP-for-ReCOGS, we considered
+# these words out-of-vocabulary to be more conservative.
+# See also the discussion on COGS Github with the COGS
+# author at https://github.com/najoungkim/COGS/issues/2#issuecomment-976216841 .
 def normalize_nv(nv) {
 nv_normalization_map = {"ate": "eat", "painted": "paint", "drew": "draw", "cleaned": "clean", "cooked": "cook", "dusted": "dust", "hunted": "hunt", "nursed": "nurse", "sketched": "sketch", "washed": "wash", "juggled": "juggle", "called": "call", "eaten": "eat", "drawn": "draw", "baked": "bake", "liked": "like", "knew": "know", "helped": "help", "saw": "see", "found": "find", "heard": "hear", "noticed": "notice", "loved": "love", "admired": "admire", "adored": "adore", "appreciated": "appreciate", "missed": "miss", "respected": "respect", "tolerated": "tolerate", "valued": "value", "worshipped": "worship", "observed": "observe", "discovered": "discover", "held": "hold", "stabbed": "stab", "touched": "touch", "pierced": "pierce", "poked": "poke", "known": "know", "seen": "see", "hit": "hit", "hoped": "hope", "said": "say", "believed": "believe", "confessed": "confess", "declared": "declare", "proved": "prove", "thought": "think",
 "supported": "support", "wished": "wish", "dreamed": "dream", "expected": "expect", "imagined": "imagine", "envied": "envy", "wanted": "want", "preferred": "prefer", "needed": "need", "intended": "intend", "tried": "try", "attempted": "attempt", "planned": "plan", "craved": "crave", "hated": "hate", "enjoyed": "enjoy", "rolled": "roll", "froze": "freeze", "burned": "burn", "shortened": "shorten", "floated": "float", "grew": "grow", "slid": "slide", "broke": "break", "crumpled": "crumple", "split": "split", "changed": "change", "snapped": "snap", "tore": "tear", "collapsed": "collapse", "decomposed": "decompose", "doubled": "double", "improved": "improve", "inflated": "inflate", "enlarged": "enlarge", "reddened": "redden", "popped": "pop", "disintegrated": "disintegrate", "expanded": "expand", "cooled": "cool", "soaked": "soak", "frozen": "freeze", "grown": "grow", "broken": "break", "torn": "tear", "slept": "sleep", "smiled": "smile", "laughed": "laugh",
