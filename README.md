@@ -1,25 +1,25 @@
+THIS IS NOT AN ANONYMOUS REPO! THERE IS A PUBLIC REPO INTENTIONALLY CONTINUOUSLY UPDATED FROM 2024 - HAS BEEN AND WILL REMAIN VISIBLE.
+THIS IS A MIRROR BRANCH USED BY 4open.science WHICH APPLIES ADDITIONAL FILTERS JUST TO HELP REVIEWERS WHO WANT TO AVOID SEEING THE AUTHOR'S NAME WHEN READING.
+
 Solving little problems in Restricted Access Sequence Processing (RASP), a language designed to help one in "Thinking Like Transformers" (title of Weiss et al 2021 paper, https://arxiv.org/abs/2106.06981 ,  which introduced it). 
 
-Used RASP for a final project in Stanford XCS224U class in 2024 to solve ReCOGS_pos ( https://digitalcredential.stanford.edu/check/24288227F20DD8486799B5FF5E8C04CB440129EC0DE44FEB65C4BAFABDBAA68BQWtzR2p1TG45dHowNWg5dXp6UW1kNmdYVVExekNJa1V3R2J5aFdhWi9Lb01MakFZ ) so was trying to keep myself accountable by working through problems in a repo along the way. 
+Used RASP for what was originally a final project in Stanford XCS224U class in 2024 to solve ReCOGS_pos so was trying to keep myself accountable by working through problems in a repo along the way. After the course, this grew into a paper at _ ( https://anonymous.4open.science/r/RASP-for-ReCOGS-16B9 ) and also a separate solution of the harder original COGS dataset at https://anonymous.4open.science/r/RASP-for-COGS-102F/ .
 
 Programs in this folder can be interpreted using Weiss et al 2021's RASP interpreter at https://github.com/tech-srl/RASP .
 
-Please cite this repository and/or the associated paper-in-progress at https://raw.githubusercontent.com/willy-b/RASP-for-ReCOGS/main/rasp-for-recogs_pos-wbruns-2024-draft.pdf if you use anything from here or find it helpful!
+Please cite this repository and/or the associated paper at _ (also https://anonymous.4open.science/r/RASP-for-ReCOGS-16B9 ) if you use anything from here or find it helpful!
 
 ## RASP-for-ReCOGS_pos ( recogs_examples_in_rasp.py and word-level-pos-tokens-recogs-style-decoder-loop.rasp )
 
-**Update: There is an associated unpublished research paper which is in early stages at https://raw.githubusercontent.com/willy-b/RASP-for-ReCOGS/main/rasp-for-recogs_pos-wbruns-2024-draft.pdf .**
+**Copies of evaluation results notebooks and a comparison with Wu et al 2023 Transformer baselines trained from scratch are also checked in at https://anonymous.4open.science/r/RASP-for-ReCOGS-16B9/supplemental_data#analysis-and-evaluation-notebooks .**
 
-**Copies of evaluation results notebooks and a comparison with Wu et al 2023 Transformer baselines trained from scratch are also checked in at https://github.com/willy-b/RASP-for-ReCOGS/tree/main/supplemental_data#analysis-and-evaluation-notebooks .**
-
-This section describes a RASP model under development to perform the ReCOGS_pos task (see Wu et al 2023, "ReCOGS: How Incidental Details of a Logical Form Overshadow an Evaluation of Semantic Interpretation", https://arxiv.org/abs/2303.13716 for task description) to try to prove-by-construction that a Transformer can learn it in a compositional, systematic, length generalizing way and try to understand why some errors are observed.
+This section describes a RASP model to perform the ReCOGS_pos task (see Wu et al 2023, "ReCOGS: How Incidental Details of a Logical Form Overshadow an Evaluation of Semantic Interpretation", https://arxiv.org/abs/2303.13716 for task description) to try to prove-by-construction that a Transformer can learn it in a compositional, systematic, length generalizing way and try to understand why some errors are observed.
 
 You can run a demo and see the autoregressive output on the training set
 
 (or just visit e.g. REDACTED for a full dev set evaluation )
 
 ```
-git clone https://github.com/willy-b/learning-rasp.git
 cd learning-rasp
 python recogs_examples_in_rasp.py # runs only 5 examples on training set by default, you can run more examples or evaluate on dev/test/gen by using commandline arguments (see file)
 ```
@@ -28,12 +28,10 @@ The script will show performance on Wu et al 2023 ReCOGS_pos training data by de
 
 ![](expanded_version_of_sentences_and_lfs_and_lf_graph_figure.png)
 
-Figure 1 from ![paper-in-progress](https://raw.githubusercontent.com/willy-b/RASP-for-ReCOGS/main/rasp-for-recogs_pos-wbruns-2024-draft.pdf) (vector graphics used in paper, raster above).
-The task we solve is to extract the meaning (c) written in format (iii) of sentences (i). Full description of Figure (in higher quality vector graphics as well) is in the paper.
+Figure 1 from the paper ( https://anonymous.4open.science/r/RASP-for-ReCOGS-16B9 ) (vector graphics used in paper, raster above).
+The task we solve is to extract the meaning (c) written in format (iii) of sentences (i). Full description of Figure (in higher quality vector graphics as well) is in the paper. (Note, as a convention, we draw the arrow from the agent to the verb in the semantic graphs like (c) so that they layout nicely.)
 
-For ReCOGS, intending to perform well on Semantic Exact Match, we took a simple, flat, non-tree, non-recursive (except for decoder loop) approach which was able to get 100% on the full test set first try: REDACTED .
-
-We also report String Exact Match since https://github.com/willy-b/learning-rasp/pull/7 (Semantic Exact Match is more forgiving, ignoring reorderings of the logical form that do not change the semantics).
+For ReCOGS, intending to perform well on Semantic Exact Match, we took a simple, flat, non-tree, non-recursive approach (we do NOT implement any tree/recursive combination rules across sequence positions like `np_det pp np -> np_pp -> np`) which was able to get 100% on the full test set first try.
 
 We took the RASP native sequence tokens, and first did a Transformer learned-embedding compatible operation and created 1 part-of-speech and 4 extra verb-type sequences (because each word in the COGS vocabulary may actually serve multiple POS roles; up to four different verb types as in the case of "liked" 
 
@@ -83,13 +81,13 @@ For example, we can use this to see that by 55 examples of the ReCOGS training s
 
 This confirms that if one already knows parts of speech and verb types for words one needs much less data (note this is consistent with large pretrained Transformer language models being observed to have learned to represent part of speech at the earliest layers, (Tenney et al 2019, "BERT Rediscovers the Classical NLP Pipeline", https://arxiv.org/abs/1905.05950 ).
 
-Thus, we can be more efficient than using the ReCOGS training set for our RASP model built by hand since our solution uses a manual embedding via a dictionary mapping words to part-of-speech and verb-type, that ensures all words within a part of speech are treated identically. In general, pre-training or using an embedding like GloVe (Pennington et al., 2014) could ensure this type of information was available in the embedding; when training from scratch for COGS/ReCOGS we expect the act of modeling the input sentences to be able to result in embeddings with part-of-speech and verb type information, to facilitate this one might consider also to adjust the training objective as discussed in (Ahuja et al., 2024) to explicitly predict the input sentences by treating the seq2seq problem as a language modeling problem for the input concatenated with output instead of as a seq2seq. We
+Thus, we can be more efficient than using the ReCOGS training set for our RASP model built by hand since our solution uses a manual embedding via a dictionary mapping words to part-of-speech and verb-type, that ensures all words within a part of speech are treated identically. In general, pre-training or using an embedding like GloVe (Pennington et al., 2014) could ensure this type of information was available in the embedding; when training from scratch for COGS/ReCOGS we expect the act of modeling the input sentences to be able to result in embeddings with part-of-speech and verb type information, to facilitate this one might consider also to adjust the training objective as discussed in (Ahuja et al., 2024; https://direct.mit.edu/tacl/article/doi/10.1162/tacl_a_00733/127877/Learning-Syntax-Without-Planting-Trees ) to explicitly predict the input sentences by treating the seq2seq problem as a language modeling problem for the input concatenated with output instead of as a seq2seq (note: (Ahuja et al., 2024)'s paper title is "Learning Syntax without Planting Trees" but we are going further in the RASP-for-ReCOGS paper associated with this repo saying a tree-structured/hierarchical representation, at least for ReCOGS (and COGS, see github.com/XXXX/RASP-for-COGS ) is not required at all for some seemingly "hierarchical" computations, not just that it doesn't need to be "planted" or have a bias for it forced on the model). We
 are focused on ReCOGS (and COGS) structural generalizations (which Transformer models perform poorly on), not lexical generalizations in this paper (Transformers already known to perform relatively well), so do not study the learning of word level representations (embeddings) here, only how those words are combined once they are mapped
 to their possible part-of-speech and possible verb-types.
 
 We generated 21 sentences which cover 100\% of the COGS input grammar ( Zeller et al 2023, https://www.fuzzingbook.org/html/GrammarCoverageFuzzer.html ) under those constraints (under the context free grammar, tree based assumption which turns out to be incorrect just for prepositional phrases):
 
-(note that if the prepositional phrase and complement phrase cases were added into one or two of 19 base grammar form examples only 19 total examples are actually needed, but we keep the recursive grammar parts separated for clarity here)
+(note that if the prepositional phrase and sentential complement cases were added into one or two of 19 base grammar form examples only 19 total examples are actually needed, but we keep the recursive grammar parts separated for clarity here)
 
 ```
 "the girl was painted", 
@@ -207,8 +205,7 @@ the 4,186th example (other equivalent-for-these-purposes sentential complement e
 matched (the 19 pattern matches plus a general cp/pp rule are used) and so do not exist in the RASP code, but are just given for
 reference.)
 
-The first 19 of those sentences are present in our RASP program code ( https://github.com/willy-b/learning-rasp/blob/
-dca0bc6689b0454b75e5a46e77ffe66566ca7661/word-level-pos-tokens-recogs-style-decoder-loop.rasp\#L568 ) as canonical examples of verb type templates.
+The first 19 of those sentences are present in our RASP program code as canonical examples of verb type templates.
 For each of these sentences we add a group of RASP operations corresponding to attention operations in a Transformer to match a template corresponding to that sentence type. 
 
 Those 19 examples reflect the only rules for handling non-prepositional grammar rules. 
@@ -257,9 +254,9 @@ Example RASP model same flat grammar pattern non-matching case:
 
 **These patterns are not causal because their use/input/output is masked to the input section of the sequence, so would take part in the Encoder of the Encoder-Decoder only**(**all operations outside the input mask in the word-level token RASP solution used in this paper are directly or indirectly causally masked** and we built symbol by symbol in a causal autoregressive way). **We could have added an explicit causal mask to each operation but for efficiency and simplicity of the code omitted it when we are doing it implicitly by taking only the last sequence position (we also acausally aggregate so that all sequence positions have the same value as the last sequence position to make it easier to read the output -- RASP interpreter will just print it as one position if they are all equal and we only take one position).**
 
-Also, the author thinks many of these RASP steps could be consolidated. The goal here was to first prove by construction that a non-recursive, flat RASP program could get approximately 100% Semantic Exact Match on all the ReCOGS generalization splits (we only missed one split by a little due to two week time constraint, insufficient time to add all prepositional phrase handling rules).
+Also, the author thinks many of these RASP steps could be consolidated. The goal here was to first prove by construction that a non-recursive, flat RASP program could get approximately 100% Semantic Exact Match on all the ReCOGS generalization splits (we only missed 100% semantic exact match on one of the generalization splits, achieving 92%, and it is not a fundamental limitation of our approach, we achieved 100% string exact match on that same split in the separate RASP-for-COGS project which uses the same input grammar and is more difficult so believe it was an unlucky/human implementation mistake only).
 
-Introduction of variables at the beginning of the ReCOGS logical form (e.g. in the logical form for "a boy painted the girl", we have "boy ( 1 ) ; * girl ( 4 ) ; paint ( 2 ) AND agent ( 2 , 1 ) AND theme ( 2 , 4 )" , the variable introduction is "boy ( 1 ) ; * girl ( 4 ) ; paint ( 2 )" before the "AND"). A more complete solution that handles not just prepositional phrase recursion (we score approximately 100% with the solution we are describing here). In the description here we ignore complement phrases (see code for those details) and simplify and just sort the input sequence with nouns before verbs and determiners, fillers last (with determiners and fillers not having any corresponding entry in the output sequence). We then count nouns and verbs in the input and count nouns and verbs in the output and determine if we have introduced all the nouns and verbs.
+Introduction of variables at the beginning of the ReCOGS logical form (e.g. in the logical form for "a boy painted the girl", we have "boy ( 1 ) ; * girl ( 4 ) ; paint ( 2 ) AND agent ( 2 , 1 ) AND theme ( 2 , 4 )" , the variable introduction is "boy ( 1 ) ; * girl ( 4 ) ; paint ( 2 )" before the "AND"). A more complete solution that handles not just prepositional phrase recursion (we score approximately 100% with the solution we are describing here). In the description here we ignore sentential complements / complement phrases (see code for those details) and simplify and just sort the input sequence with nouns before verbs and determiners, fillers last (with determiners and fillers not having any corresponding entry in the output sequence). We then count nouns and verbs in the input and count nouns and verbs in the output and determine if we have introduced all the nouns and verbs.
 
 Example counting how many nouns and verbs we have output (introduced as variables) so far (to determine what we need to output for next token):
 ```
@@ -647,7 +644,6 @@ You can run a demo and see the autoregressive output on the training set
 (or just visit e.g. REDACTED for a full dev set evaluation )
 
 ```
-git clone https://github.com/willy-b/learning-rasp.git
 cd learning-rasp
 python recogs_examples_in_rasp.py # runs only 5 examples on training set by default, you can run more examples or evaluate on dev/test/gen by using commandline arguments (see file)
 ```

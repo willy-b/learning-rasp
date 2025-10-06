@@ -1,108 +1,47 @@
+# THIS IS NOT AN ANONYMOUS REPO! THERE IS A PUBLIC REPO INTENTIONALLY CONTINUOUSLY UPDATED FROM 2024 - HAS BEEN AND WILL REMAIN VISIBLE.
+# THIS IS A MIRROR BRANCH USED BY 4open.science WHICH APPLIES ADDITIONAL FILTERS JUST TO HELP REVIEWERS WHO WANT TO AVOID SEEING THE AUTHOR'S NAME WHEN READING.
+
 # To try this out, run `python recogs_examples_in_rasp.py`!
 
 # Note, it is simpler and more performant to just train the Transformer on examples!
 # This is an academic exercise, writing a neural network compatible program by hand in the Restricted Access Sequence Processing (compilable to Transformer) language (Weiss et al 2021, https://arxiv.org/abs/2106.06981 )
-# to prove a Transformer can perform a particular type of solution (we will be building a grammar based and compositional solution).
-# (See the draft paper at https://raw.githubusercontent.com/willy-b/RASP-for-ReCOGS/main/rasp-for-recogs_pos-wbruns-2024-draft.pdf .)
+# to prove a Transformer can perform a particular type of solution (we will be building a compositional and length generalizing solution).
+# (See the draft paper at https://anonymous.4open.science/r/RASP-for-ReCOGS-16B9 )
+# and also the even better solution developed in 2025 for the base COGS dataset at https://anonymous.4open.science/r/RASP-for-COGS-102F/ ).
 
-# See recogs_examples_in_rasp.py for a way to run this. Alteratively use the RASP interpreter REPL to run it line by line and see the output.
+# See recogs_examples_in_rasp.py for a way to run this. Alternatively use the RASP interpreter REPL to run it line by line and see the output.
 
-# Given the "COGS: A Compositional Generalization Challenge Based on Semantic Interpretation"
+# Let us write a ReCOGS model in RASP equivalent to a Transformer, 
+# with a word-level tokenizer and embedding layer. 
+
+# Note, the input sentences for COGS and ReCOGS are identical except ReCOGS adds some augmented training examples (we can ignore the augmentations which are only to help vanilla Transformers learn); 
+# the underlying grammar and vocabulary are unchanged from COGS to ReCOGS, 
+# apart from augmentations, it is only the format of the logical form output in ReCOGS for the same inputs that changes.
+
+# So we start with the "COGS: A Compositional Generalization Challenge Based on Semantic Interpretation"
 # (Kim and Linzen 2020, https://aclanthology.org/2020.emnlp-main.731 )
-# English input sentence grammar,
+# English input sentence vocab and grammar.
+# This code does not actually implement the grammar but uses 19 flat pattern matches that cover the non-recursive aspects of this grammar.
 
-# ( Vocab and grammar for COGS courtesy of IBM's CPG project (their utilities, not their CPG itself) at https://github.com/IBM/cpg/blob/c3626b4e03bfc681be2c2a5b23da0b48abe6f570/src/model/cogs_data.py#L523 )
+# ( Vocab, input grammar, and verb stems/normalization for COGS, facts of the dataset, are usefully described in IBM's CPG project (their utilities, not their CPG itself) 
+# at https://github.com/IBM/cpg/blob/c3626b4e03bfc681be2c2a5b23da0b48abe6f570/src/model/cogs_data.py#L523 , https://github.com/IBM/cpg/blob/c3626b4e03bfc681be2c2a5b23da0b48abe6f570/src/model/cogs_data.py#L485 )
 
-# start: s1 | s2 | s3 | s4 | vp_internal
-#     s1: np vp_external
-#     s2: np vp_passive
-#     s3: np vp_passive_dat
-#     s4: np vp_external4
-#     vp_external: v_unerg [np v_unerg, done]
-#      | v_trans_omissible_p1 [np v_trans_omissible_p1, done]
-#      | vp_external1 | vp_external2 | vp_external3 | vp_external5 | vp_external6 | vp_external7
-#     vp_external1: v_unacc_p1 np [np v_unacc np, done]
-#     vp_external2: v_trans_omissible_p2 np [np v_trans_omissible_p2 np, done]
-#     vp_external3: v_trans_not_omissible np [np v_trans_not_omissible np, done]
-#     vp_external4: v_inf_taking to v_inf [np v_inf_taking to v_inf, done]
-#     vp_external5: v_cp_taking that start [complement recursion case! needs special handling!]
-#     vp_external6: v_dat_p1 np pp_iobj [np v_dat_p1 np pp_iobj, done]
-#     vp_external7: v_dat_p2 np np [np v_dat_p2 np np, done]
-#     vp_internal: np v_unacc_p2 [np v_unacc_p2, done]
-#     vp_passive: vp_passive1 | vp_passive2 | vp_passive3 | vp_passive4 | vp_passive5 | vp_passive6 | vp_passive7 | vp_passive8
-#     vp_passive1: was v_trans_not_omissible_pp_p1 [np was v_trans_not_omissible_pp_p1, done]
-#     vp_passive2: was v_trans_not_omissible_pp_p2 by np [np was v_trans_not_omissible_pp_p2 by np, done]
-#     vp_passive3: was v_trans_omissible_pp_p1 [np was v_trans_omissible_pp_p1, done]
-#     vp_passive4: was v_trans_omissible_pp_p2 by np [np was v_trans_omissible_pp by np, done]
-#     vp_passive5: was v_unacc_pp_p1 [np was v_unacc_pp_p1, done]
-#     vp_passive6: was v_unacc_pp_p2 by np [np was v_unacc_pp_p2 by np, done]
-#     vp_passive7: was v_dat_pp_p1 pp_iobj [np was v_dat_pp_p1 to np, done]
-#     vp_passive8: was v_dat_pp_p2 pp_iobj by np [np was v_dat_pp_p2 to np by np, done]
-#     vp_passive_dat: vp_passive_dat1 | vp_passive_dat2
-#     vp_passive_dat1: was v_dat_pp_p3 np [np was v_dat_pp_p3 np, done]
-#     vp_passive_dat2: was v_dat_pp_p4 np by np [np was v_dat_pp_p4 np by np, done]
-#     np: np_prop | np_det | np_pp
-#     np_prop: proper_noun
-#     np_det: det common_noun
-#     np_pp: np_det pp np # note we are temporarily ignoring this important case which will actually be a primary focus of our model eventually
-#     pp_iobj: to np
-#     det: "the" | "a"
-#     pp: "on" | "in" | "beside"
-#     was: "was"
-#     by: "by"
-#     to: "to"
-#     that: "that"
-#     common_noun: "girl" | "boy" | "cat" | "dog" | ...
-#     proper_noun: "emma" | "liam" | "olivia" | "noah" | ...
-#     v_trans_omissible_p1: "ate" | "painted" | "drew" | "cleaned" | ...
-#     v_trans_omissible_p2: "ate" | "painted" | "drew" | "cleaned" | ...
-#     v_trans_omissible_pp_p1: "eaten" | "painted" | "drawn" | "cleaned" | ...
-#     v_trans_omissible_pp_p2: "eaten" | "painted" | "drawn" | "cleaned" | ...
-#     v_trans_not_omissible: "liked" | "helped" | "found" | "loved" | ...
-#     v_trans_not_omissible_pp_p1: "liked" | "helped" | "found" | "loved" | ...
-#     v_trans_not_omissible_pp_p2: "liked" | "helped" | "found" | "loved" | ...
-#     v_cp_taking: "liked" | "hoped" | "said" | "noticed" | "believed" | ...
-#     v_inf_taking: "wanted" | "preferred" | "needed" | "intended" | ...
-#     v_unacc_p1: "rolled" | "froze" | "burned" | "shortened" | ...
-#     v_unacc_p2: "rolled" | "froze" | "burned" | "shortened" | ...
-#     v_unacc_pp_p1: "rolled" | "frozen" | "burned" | "shortened" | ...
-#     v_unacc_pp_p2: "rolled" | "frozen" | "burned" | "shortened" | ...
-#     v_unerg: "slept" | "smiled" | "laughed" | "sneezed" | ...
-#     v_inf: "walk" | "run" | "sleep" | "sneeze" | ...
-#     v_dat_p1: "gave" | "lended" | "sold" | "offered" | ...
-#     v_dat_p2: "gave" | "lended" | "sold" | "offered" | ...
-#     v_dat_pp_p1: "given" | "lended" | "sold" | "offered" | ...
-#     v_dat_pp_p2: "given" | "lended" | "sold" | "offered" | ...
-#     v_dat_pp_p3: "given" | "lended" | "sold" | "offered" | ...
-#     v_dat_pp_p4: "given" | "lended" | "sold" | "offered" | ...
-
-# and corresponding COGS LF output templates (also thanks to IBM for creating this mapping to explain the COGS dataset)
-
-# V_TRANS_OMISSIBLE_P1: 'y . agent ( y , y )'
-# V_TRANS_OMISSIBLE_P2: 'y . agent ( y , y ) y . theme ( y , y )'
-# V_TRANS_OMISSIBLE_PP_P1: 'y . theme ( y , y )'
-# V_TRANS_OMISSIBLE_PP_P2: 'y . theme ( y , y ) y . agent ( y , y )'
-# V_TRANS_NOT_OMISSIBLE: 'y . agent ( y , y ) y . theme ( y , y )'
-# V_TRANS_NOT_OMISSIBLE_PP_P1: 'y . theme ( y , y )'
-# V_TRANS_NOT_OMISSIBLE_PP_P2: 'y . theme ( y , y ) y . agent ( y , y )'
-# V_CP_TAKING: 'y . agent ( y , y ) y . ccomp ( y , y )'
-# V_INF_TAKING: 'y . agent ( y , y ) y . xcomp ( y , y )'
-# V_UNACC_P1: 'y . agent ( y , y ) y . theme ( y , y )'
-# V_UNACC_P2: 'y . theme ( y , y )'
-# V_UNACC_PP_P1: 'y . theme ( y , y )'
-# V_UNACC_PP_P2: 'y . theme ( y , y ) y . agent ( y , y )'
-# V_UNERG: 'y . agent ( y , y )'
-# V_INF: 'y . agent ( y , y )'
-# V_DAT_P1: 'y . agent ( y , y ) y . theme ( y , y ) y . recipient ( y , y )'
-# V_DAT_P2: 'y . agent ( y , y ) y . recipient ( y , y ) y . theme ( y , y )'
-# V_DAT_PP_P1: 'y . theme ( y , y ) y . recipient ( y , y )'
-# V_DAT_PP_P2: 'y . theme ( y , y ) y . recipient ( y , y ) y . agent ( y , y )'
-# V_DAT_PP_P3: 'y . recipient ( y , y ) y . theme ( y , y )'
-# V_DAT_PP_P4: 'y . recipient ( y , y ) y . theme ( y , y ) y . agent ( y , y )'
-
-# and the verb normalization map (fact of the dataset) for the verbs before they go into the outputted logical forms:
-# (as grammar above, used IBM's list in the utilities for their CPG project which I am NOT using otherwise: https://github.com/IBM/cpg/blob/c3626b4e03bfc681be2c2a5b23da0b48abe6f570/src/model/cogs_data.py#L485 )
-# I include all the words so I can apply it to the sequence but the values are only different than the keys for verbs
+# (Note we followed (Klinger et al., 2024)'s description
+# of COGS and included in our RASP-for-ReCOGS vocabulary
+# (part-of-speech or verb-type embedding/mapping) all words
+# occurring anywhere in the upstream (Re)COGS "train.tsv".
+# For RASP-for-ReCOGS only, we also include two words in
+# our vocab/embedding as common nouns accidentally left
+# out of train.tsv vocabulary by the COGS author (COGS
+# vocab is used by ReCOGS): "monastery" and "gardner"
+# (only included in their train_100.tsv and dev.tsv not also
+# in train.tsv, but present in test/gen), a decision affecting
+# just 22 or 0.1% of generalization examples so would not
+# affect any conclusions qualitatively. For RASP-for-COGS ( https://anonymous.4open.science/r/RASP-for-COGS-102F/ )
+# which was started after RASP-for-ReCOGS, we considered
+# these words out-of-vocabulary to be more conservative.
+# See also the discussion on COGS Github with the COGS
+# author at https://github.com/najoungkim/COGS/issues/2#issuecomment-976216841 .)
 def normalize_nv(nv) {
 nv_normalization_map = {"ate": "eat", "painted": "paint", "drew": "draw", "cleaned": "clean", "cooked": "cook", "dusted": "dust", "hunted": "hunt", "nursed": "nurse", "sketched": "sketch", "washed": "wash", "juggled": "juggle", "called": "call", "eaten": "eat", "drawn": "draw", "baked": "bake", "liked": "like", "knew": "know", "helped": "help", "saw": "see", "found": "find", "heard": "hear", "noticed": "notice", "loved": "love", "admired": "admire", "adored": "adore", "appreciated": "appreciate", "missed": "miss", "respected": "respect", "tolerated": "tolerate", "valued": "value", "worshipped": "worship", "observed": "observe", "discovered": "discover", "held": "hold", "stabbed": "stab", "touched": "touch", "pierced": "pierce", "poked": "poke", "known": "know", "seen": "see", "hit": "hit", "hoped": "hope", "said": "say", "believed": "believe", "confessed": "confess", "declared": "declare", "proved": "prove", "thought": "think",
 "supported": "support", "wished": "wish", "dreamed": "dream", "expected": "expect", "imagined": "imagine", "envied": "envy", "wanted": "want", "preferred": "prefer", "needed": "need", "intended": "intend", "tried": "try", "attempted": "attempt", "planned": "plan", "craved": "crave", "hated": "hate", "enjoyed": "enjoy", "rolled": "roll", "froze": "freeze", "burned": "burn", "shortened": "shorten", "floated": "float", "grew": "grow", "slid": "slide", "broke": "break", "crumpled": "crumple", "split": "split", "changed": "change", "snapped": "snap", "tore": "tear", "collapsed": "collapse", "decomposed": "decompose", "doubled": "double", "improved": "improve", "inflated": "inflate", "enlarged": "enlarge", "reddened": "redden", "popped": "pop", "disintegrated": "disintegrate", "expanded": "expand", "cooled": "cool", "soaked": "soak", "frozen": "freeze", "grown": "grow", "broken": "break", "torn": "tear", "slept": "sleep", "smiled": "smile", "laughed": "laugh",
@@ -124,11 +63,14 @@ nv_normalization_map = {"ate": "eat", "painted": "paint", "drew": "draw", "clean
 return nv_normalization_map[nv];
 }
 
-# Let us use word-level POS tokens and see if we can recognize parts of this grammar in the Restricted Access Sequence Processing (RASP) language in a systematic way (which means a Transformer can do it).
-# (This particular file is a ReCOGS model in RASP equivalent to a Transformer, with a word-level tokenizer and embedding layer. The model here starts by replacing each word with a word-level token pre-tagged with the part-of-speech (POS) in the COGS grammar (e.g. det, common noun, proper noun, verb transitive object omissible; in some cases multiple of these are possible for a given word) as the input to the rest of the RASP which performs select/aggregate operations equivalent to attention heads and elementwise operations realizable in MLP layers within a Transformer block. The simple part-of-speech tags we add to the words here are thought to be easily learned by a real Transformer in the input embedding layer perhaps also with first Transformer block (or would be implicit in say a GloVe embedding if that were used instead), consistent with e.g. Tenney et al 2019 finding that by the earliest layers of a BERT pretrained Transformer part of speech information is already found to have been learned to be represented by the model ("BERT Rediscovers the Classical NLP Pipeline" Tenney et al 2019 https://arxiv.org/abs/1905.05950; quote: "89% of part-of-speech tags are correct at layer 0", referring to more complicated text than we have here).)
+# The model here starts by replacing each word with a word-level token pre-tagged with the part-of-speech (POS) in the COGS grammar 
+# (e.g. det, common noun, proper noun, verb transitive object omissible; in some cases multiple of these are possible for a given word) 
+# as the input to the rest of the RASP which performs select/aggregate operations equivalent to attention heads and elementwise operations realizable in MLP layers within a Transformer block.
+# The simple part-of-speech tags we add to the words here are thought to be easily learned by a real Transformer in the input embedding layer perhaps also with first Transformer block 
+# (or would be implicit in say a GloVe embedding if that were used instead),
+# consistent with e.g. Tenney et al 2019 finding that by the earliest layers of a BERT pretrained Transformer part of speech information is already found to have been learned to be represented by the model ("BERT Rediscovers the Classical NLP Pipeline" Tenney et al 2019 https://arxiv.org/abs/1905.05950; quote: "89% of part-of-speech tags are correct at layer 0", referring to more complicated text than we have here).)
 
-# we can tokenize as 2D, 1st dimension is index into wordlist,
-# second dimension is the POS which will be represented as a separate sequence of the following:
+# we can tokenize as words and embed to POS which will be represented as a separate sequence of the following:
 # det: 1
 # pp: 2
 # was: 3
@@ -269,31 +211,9 @@ pos_tokens_vmap4 = pos_tokens + word_level_token_to_part_of_speech_verb_index_4(
 
 # the mappings above would be learned by an embedding layer;
 # we are writing them by hand in Restricted Access Sequence Processing (compilable to Transformer)
-# to prove a Transformer can perform a particular type of solution (we will be building a grammar based and compositional solution)
-
-# higher order items not present in original tokenization which may be created by combining the above
-# vp_external
-# vp_internal
-# vp_passive
-# vp_passive_dat
-# np
-# np_prop
-# np_det
-# np_pp
-# np_iobj
-
-# Then, "a boy painted the girl" becomes "1 7 9 1 7" (really [1,7,9,1,7])
-# and "the girl was painted by a boy" becomes "1 7 3 10 4 1 7" (really [1,7,3,10,4,1,7])
-
-# we can run a layer that replaces "1 7" (det common_noun) by np_det
-# a layer that replaces np_det by np, suppose np is 22
-# then we get "22 9 22" and "22 3 10 4 22"
-# we can recognize "22 9 22" in all cases as fitting the template "_22-1_ (1) ; _22-1_ (2) ; _9_ (3) AND agent ( 3 , 1 ) AND theme ( 3 , 2 )" -> "boy ( 1 ) ; * girl ( 2 ) ; painted ( 3 ) AND agent ( 3 , 1 ) AND theme ( 3 , 2 )" (not handling mapping "painted" to stem "paint" yet)
-#  (where 22-1 means take the det out of the np, add * if "the")
-# we can recognize "22a 3 10 4 22b" in all cases as fitting the template "_22-1a_ (1) ; _22-1b_ (2) ; _10_ (3) AND agent ( 3 , 2 ) AND theme ( 3 , 1 )" -> "* girl ( 1 ) ; boy ( 2 ) ; painted ( 3 ) AND agent ( 3 , 2 ) AND theme ( 3 , 1 )"
-# which shows that these sentences are identical in meaning in ReCOGS format .
-
-# Let's just start writing recognizers for different parts of the grammar before we start putting it all together in a systematic solution.
+# to prove a Transformer can perform a particular type of solution (we build a compositional, length generalizing solution
+# using flat pattern matching to cover the nonrecursive parts of the grammar and masking to separate the recursive parts which
+# are unrolled in the Decoder loop)
 
 # Digression on input sections; for decoder loop we need to separate input and our own output so far though they belong to the same (raw input) sequence.
 # Use "|" delimiter not used in COGS or ReCOGS
