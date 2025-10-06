@@ -9,7 +9,7 @@ Please cite this repository and/or the associated paper at _ (also https://anony
 
 ## RASP-for-ReCOGS_pos ( recogs_examples_in_rasp.py and word-level-pos-tokens-recogs-style-decoder-loop.rasp )
 
-**Copies of evaluation results notebooks and a comparison with Wu et al 2023 Transformer baselines trained from scratch are also checked in at https://anonymous.4open.science/r/RASP-for-ReCOGS-16B9/supplemental_data#analysis-and-evaluation-notebooks .**
+**Copies of evaluation results notebooks and a comparison with Wu et al 2023 Transformer baselines trained from scratch are also checked in at https://anonymous.4open.science/r/RASP-for-ReCOGS-16B9 under the supplemental_data folder**
 
 This section describes a RASP model to perform the ReCOGS_pos task (see Wu et al 2023, "ReCOGS: How Incidental Details of a Logical Form Overshadow an Evaluation of Semantic Interpretation", https://arxiv.org/abs/2303.13716 for task description) to try to prove-by-construction that a Transformer can learn it in a compositional, systematic, length generalizing way and try to understand why some errors are observed.
 
