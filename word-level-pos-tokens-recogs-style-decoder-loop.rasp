@@ -11,9 +11,14 @@
 # Let us write a ReCOGS model in RASP equivalent to a Transformer, 
 # with a word-level tokenizer and embedding layer. 
 
-# We start with the "COGS: A Compositional Generalization Challenge Based on Semantic Interpretation"
+# Note, the input sentences for COGS and ReCOGS are identical except ReCOGS adds some augmented training examples (we can ignore the augmentations which are only to help vanilla Transformers learn); 
+# the underlying grammar and vocabulary are unchanged from COGS to ReCOGS, 
+# apart from augmentations, it is only the format of the logical form output in ReCOGS for the same inputs that changes.
+
+# So we start with the "COGS: A Compositional Generalization Challenge Based on Semantic Interpretation"
 # (Kim and Linzen 2020, https://aclanthology.org/2020.emnlp-main.731 )
-# English input sentence vocab and grammar (this code does not actually implement the grammar but uses 19 flat pattern matches that cover the non-recursive aspects of this grammar).
+# English input sentence vocab and grammar.
+# This code does not actually implement the grammar but uses 19 flat pattern matches that cover the non-recursive aspects of this grammar.
 
 # ( Vocab, input grammar, and verb stems/normalization for COGS, facts of the dataset, are usefully described in IBM's CPG project (their utilities, not their CPG itself) 
 # at https://github.com/IBM/cpg/blob/c3626b4e03bfc681be2c2a5b23da0b48abe6f570/src/model/cogs_data.py#L523 , https://github.com/IBM/cpg/blob/c3626b4e03bfc681be2c2a5b23da0b48abe6f570/src/model/cogs_data.py#L485 )
