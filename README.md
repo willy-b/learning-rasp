@@ -3,8 +3,6 @@ THIS IS A MIRROR BRANCH USED BY 4open.science WHICH APPLIES ADDITIONAL FILTERS J
 
 Solving little problems in Restricted Access Sequence Processing (RASP), a language designed to help one in "Thinking Like Transformers" (title of Weiss et al 2021 paper, https://arxiv.org/abs/2106.06981 ,  which introduced it). 
 
-Used RASP for what was originally a final project in Stanford XCS224U class in 2024 to solve ReCOGS_pos so was trying to keep myself accountable by working through problems in a repo along the way. After the course, this grew into a paper at _ ( https://anonymous.4open.science/r/RASP-for-ReCOGS-16B9 ) and also a separate solution of the harder original COGS dataset at https://anonymous.4open.science/r/RASP-for-COGS-102F/ .
-
 Programs in this folder can be interpreted using Weiss et al 2021's RASP interpreter at https://github.com/tech-srl/RASP .
 
 Please cite this repository and/or the associated paper at _ (also https://anonymous.4open.science/r/RASP-for-ReCOGS-16B9 ) if you use anything from here or find it helpful!
